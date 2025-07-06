@@ -1,8 +1,8 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Self
 
-from sqlalchemy import Column, String, DateTime, Text, select, ForeignKey, Boolean, Float, Date, Time, Enum
+from sqlalchemy import Column, String, DateTime, Text, select, ForeignKey, Boolean, Float, Date, Time, Enum, Numeric, Index
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -11,13 +11,13 @@ from db.postgres import Base, async_session
 from .mixins import CRUDMixin, IDMixin
 
 
-class PackageDetails(Base, IDMixin, CRUDMixin):
+class PackageDetail(Base, IDMixin, CRUDMixin):
     """Package details."""
 
     __tablename__ = "package_details"
 
-    type = Column(Enum(PackageType, create_constraint=True), default=PackageType.PACKAGE, nullable=False)
-    content_type = Column(Enum(ContentType, create_constraint=True), default=ContentType.OTHER, nullable=False)
+    type = Column(Enum(PackageType, name="package_type", native_enum=True), default=PackageType.PACKAGE, nullable=False)
+    content_type = Column(Enum(ContentType, name="content_type", native_enum=True), default=ContentType.OTHER, nullable=False)
     description = Column(Text, nullable=True)
     length = Column(Float, nullable=True)  # in cm
     width = Column(Float, nullable=True)   # in cm
@@ -25,19 +25,32 @@ class PackageDetails(Base, IDMixin, CRUDMixin):
     weight = Column(Float, nullable=True)  # in kg
     is_fragile = Column(Boolean, default=False, nullable=False)
 
+    order_id = Column(UUID, ForeignKey('orders.id', ondelete="CASCADE"), nullable=False)
 
-class Parties(Base, IDMixin, CRUDMixin):
+    order = relationship("Order", back_populates="package_details")
+
+
+class Party(Base, IDMixin, CRUDMixin):
     """Parties (sender and recipient)."""
 
     __tablename__ = "parties"
 
-    company = Column(String(255), nullable=True)
     first_name = Column(String(100), nullable=False)
     last_name = Column(String(100), nullable=False)
+    company = Column(String(255), nullable=True)
     address = Column(Text, nullable=False)
     phone = Column(String(20), nullable=False)
     email = Column(String(255), nullable=True)
     additional = Column(Text, nullable=True)
+
+    sent_orders = relationship("Order", foreign_keys='Order.sender_id', back_populates="sender")
+    received_orders = relationship("Order", foreign_keys='Order.recipient_id', back_populates="recipient")
+
+    __table_args__ = (
+        Index("ix_parties_address", "address"),
+        Index("ix_parties_company", "company"),
+        Index("uq_parties_phone", "phone", unique=True),
+    )
 
 
 class DeliveryWindow(Base, IDMixin, CRUDMixin):
@@ -49,6 +62,10 @@ class DeliveryWindow(Base, IDMixin, CRUDMixin):
     time_from = Column(Time, nullable=True)
     time_to = Column(Time, nullable=True)
 
+    order_id = Column(UUID, ForeignKey('orders.id', ondelete="CASCADE"), nullable=False)
+
+    order = relationship("Order", back_populates="delivery_windows")
+
 
 class Payment(Base, IDMixin, CRUDMixin):
     """Payment information."""
@@ -56,7 +73,11 @@ class Payment(Base, IDMixin, CRUDMixin):
     __tablename__ = "payments"
 
     method = Column(Enum(PaymentMethod, create_constraint=True), default=PaymentMethod.PREPAID, nullable=False)
-    sum = Column(Float, nullable=False)
+    amount = Column(Numeric(10, 2), nullable=False)
+
+    order_id = Column(UUID, ForeignKey('orders.id', ondelete="CASCADE"), nullable=False)
+
+    order = relationship("Order", back_populates="payments")
 
 
 class Order(Base, IDMixin, CRUDMixin):
@@ -67,20 +88,17 @@ class Order(Base, IDMixin, CRUDMixin):
     # Main order information
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
-    status = Column(Enum(OrderStatus, create_constraint=True), default=OrderStatus.CREATED, nullable=False)
+    status = Column(Enum(OrderStatus, name="order_status", native_enum=True), default=OrderStatus.CREATED, nullable=False)
     source = Column(String(100), nullable=True)
-    delivery_service_level = Column(Enum(DeliveryServiceLevel, create_constraint=True), default=DeliveryServiceLevel.STANDARD, nullable=False)
+    delivery_service_level = Column(Enum(DeliveryServiceLevel, name="delivery_service_level", native_enum=True), default=DeliveryServiceLevel.STANDARD, nullable=False)
     tracking_id = Column(UUID, default=lambda: str(uuid.uuid4()), nullable=False, unique=True)
     insurance_number = Column(String(100), nullable=True)
     special_instructions = Column(Text, nullable=True)
     additional = Column(Text, nullable=True)
 
     # Relations with other tables
-    package_details_id = Column(UUID, ForeignKey('package_details.id'), nullable=True)
-    sender_id = Column(UUID, ForeignKey('parties.id'), nullable=True)
-    recipient_id = Column(UUID, ForeignKey('parties.id'), nullable=False)
-    delivery_window_id = Column(UUID, ForeignKey('delivery_windows.id'), nullable=True)
-    payment_id = Column(UUID, ForeignKey('payments.id'), nullable=True)
+    sender_id = Column(UUID, ForeignKey('parties.id', ondelete="RESTRICT"), nullable=True)
+    recipient_id = Column(UUID, ForeignKey('parties.id', ondelete="RESTRICT"), nullable=False)
 
     # Delivery information
     courier_id = Column(UUID, nullable=True)
@@ -92,11 +110,16 @@ class Order(Base, IDMixin, CRUDMixin):
     recipient_signature = Column(Text, nullable=True)
 
     # Relationships
-    package_details = relationship("PackageDetails", backref="orders")
-    sender = relationship("Parties", foreign_keys=[sender_id], backref="sent_orders")
-    recipient = relationship("Parties", foreign_keys=[recipient_id], backref="received_orders")
-    delivery_window = relationship("DeliveryWindow", backref="orders")
-    payment = relationship("Payment", backref="orders")
+    sender = relationship("Party", foreign_keys=[sender_id], back_populates="sent_orders")
+    recipient = relationship("Party", foreign_keys=[recipient_id], back_populates="received_orders")
+    package_details = relationship("PackageDetail", back_populates="order", passive_deletes=True)
+    delivery_windows = relationship("DeliveryWindow", back_populates="order", passive_deletes=True)
+    payments = relationship("Payment", back_populates="order", passive_deletes=True)
+
+    __table_args__ = (
+        Index("ix_orders_courier_id", "courier_id"),
+    )
+
 
     def __init__(
         self,
@@ -129,6 +152,7 @@ class Order(Base, IDMixin, CRUDMixin):
     @classmethod
     async def get_by_tracking_id(cls, tracking_id: uuid.UUID) -> Self:
         """Get order by tracking ID."""
+
         async with async_session() as session:
             request = select(cls).where(cls.tracking_id == tracking_id)
             result = await session.execute(request)
@@ -138,6 +162,7 @@ class Order(Base, IDMixin, CRUDMixin):
     @classmethod
     async def get_by_status(cls, status: OrderStatus, page: int = 1, page_size: int = 20) -> list[Self]:
         """Get orders by status."""
+
         async with async_session() as session:
             request = (
                 select(cls)
@@ -153,6 +178,7 @@ class Order(Base, IDMixin, CRUDMixin):
     @classmethod
     async def get_by_courier(cls, courier_id: UUID, page: int = 1, page_size: int = 20) -> list[Self]:
         """Get courier orders."""
+
         async with async_session() as session:
             request = (
                 select(cls)
@@ -166,14 +192,16 @@ class Order(Base, IDMixin, CRUDMixin):
         return orders
 
     async def assign_courier(self, courier_id: UUID, commit: bool = True) -> bool:
-        """Assign courier to order."""
+        """Assign a courier to order."""
+
         self.courier_id = courier_id
         self.status = OrderStatus.ASSIGNED
-        self.assigned_at = datetime.utcnow()
+        self.assigned_at = datetime.now(timezone.utc)
         return await self.save(commit=commit)
 
     async def start_delivery(self, commit: bool = True) -> bool:
         """Start delivery."""
+
         self.status = OrderStatus.IN_PROGRESS
         return await self.save(commit=commit)
 
@@ -184,8 +212,9 @@ class Order(Base, IDMixin, CRUDMixin):
         commit: bool = True
     ) -> bool:
         """Complete delivery."""
+
         self.status = OrderStatus.DELIVERED
-        self.delivered_at = datetime.utcnow()
+        self.delivered_at = datetime.now(timezone.utc)
         if delivery_photo_url:
             self.delivery_photo_url = delivery_photo_url
         if recipient_signature:
@@ -194,6 +223,7 @@ class Order(Base, IDMixin, CRUDMixin):
 
     async def cancel_order(self, commit: bool = True) -> bool:
         """Cancel order."""
+
         self.status = OrderStatus.CANCELLED
         return await self.save(commit=commit)
 

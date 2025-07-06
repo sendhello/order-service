@@ -43,4 +43,4 @@ class PaymentMethod(StrEnum):
 
     PREPAID = "prepaid"
     CASH_ON_DELIVERY = "cash_on_delivery"
-    CARD = "card"
+    CARD_ON_DELIVERY = "card_on_delivery"
