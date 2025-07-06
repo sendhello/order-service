@@ -2,55 +2,17 @@ from datetime import datetime, date, time
 from typing import Optional
 from uuid import UUID
 
-from pydantic import Field, validator
+from pydantic import Field, field_validator
 
 from .base import Model
 from .mixins import IdMixin
-
-
-class OrderStatus:
-    """Статусы заказа."""
-    CREATED = "created"
-    ASSIGNED = "assigned"
-    IN_PROGRESS = "in_progress"
-    DELIVERED = "delivered"
-    CANCELLED = "cancelled"
-
-
-class DeliveryServiceLevel:
-    """Уровни сервиса доставки."""
-    STANDARD = "standard"
-    EXPRESS = "express"
-
-
-class PackageType:
-    """Типы посылок."""
-    BOX = "box"
-    PACKAGE = "package"
-    ENVELOPE = "envelope"
-    OTHER = "other"
-
-
-class ContentType:
-    """Типы содержимого."""
-    LETTER = "letter"
-    FOOD = "food"
-    GROCERY = "grocery"
-    ELECTRONICS = "electronics"
-    CLOTHING = "clothing"
-    OTHER = "other"
-
-
-class PaymentMethod:
-    """Методы оплаты."""
-    PREPAID = "prepaid"
-    CASH_ON_DELIVERY = "cash_on_delivery"
-    CARD = "card"
+from constants.order import PackageType, ContentType, OrderStatus, DeliveryServiceLevel, PaymentMethod
 
 
 # Schemas for new models
 class PackageDetailsBase(Model):
     """Базовая модель деталей посылки."""
+
     type: str = Field(default=PackageType.PACKAGE, description="Тип посылки")
     content_type: str = Field(default=ContentType.OTHER, description="Тип содержимого")
     description: Optional[str] = Field(None, description="Описание")
@@ -63,16 +25,19 @@ class PackageDetailsBase(Model):
 
 class PackageDetailsCreate(PackageDetailsBase):
     """Модель для создания деталей посылки."""
+
     pass
 
 
 class PackageDetailsResponse(PackageDetailsBase, IdMixin):
     """Модель деталей посылки для ответа."""
+
     pass
 
 
 class PartiesBase(Model):
     """Базовая модель стороны (отправитель/получатель)."""
+
     company: Optional[str] = Field(None, description="Компания")
     first_name: str = Field(..., description="Имя")
     last_name: str = Field(..., description="Фамилия")
@@ -84,16 +49,19 @@ class PartiesBase(Model):
 
 class PartiesCreate(PartiesBase):
     """Модель для создания стороны."""
+
     pass
 
 
 class PartiesResponse(PartiesBase, IdMixin):
     """Модель стороны для ответа."""
+
     pass
 
 
 class DeliveryWindowBase(Model):
     """Базовая модель временного окна доставки."""
+
     date: date = Field(..., description="Дата")
     time_from: Optional[time] = Field(None, description="Время с")
     time_to: Optional[time] = Field(None, description="Время до")
@@ -101,38 +69,45 @@ class DeliveryWindowBase(Model):
 
 class DeliveryWindowCreate(DeliveryWindowBase):
     """Модель для создания временного окна доставки."""
+
     pass
 
 
 class DeliveryWindowResponse(DeliveryWindowBase, IdMixin):
     """Модель временного окна доставки для ответа."""
+
     pass
 
 
 class PaymentBase(Model):
     """Базовая модель оплаты."""
+
     method: str = Field(default=PaymentMethod.PREPAID, description="Метод оплаты")
     sum: float = Field(..., description="Сумма")
 
 
 class PaymentCreate(PaymentBase):
     """Модель для создания оплаты."""
+
     pass
 
 
 class PaymentResponse(PaymentBase, IdMixin):
     """Модель оплаты для ответа."""
+
     pass
 
 
 class BaseOrder(Model):
     """Базовая модель заказа."""
+
     title: str = Field(..., description="Название заказа")
     description: Optional[str] = Field(None, description="Описание заказа")
 
 
 class OrderCreate(BaseOrder):
     """Модель для создания заказа."""
+
     source: Optional[str] = Field(None, description="Источник заказа")
     delivery_service_level: str = Field(default=DeliveryServiceLevel.STANDARD, description="Уровень сервиса доставки")
     insurance_number: Optional[str] = Field(None, description="Номер страховки")
@@ -149,6 +124,7 @@ class OrderCreate(BaseOrder):
 
 class OrderUpdate(Model):
     """Модель для обновления заказа."""
+
     title: Optional[str] = Field(None, description="Название заказа")
     description: Optional[str] = Field(None, description="Описание заказа")
     source: Optional[str] = Field(None, description="Источник заказа")
@@ -160,6 +136,7 @@ class OrderUpdate(Model):
 
 class OrderResponse(BaseOrder, IdMixin):
     """Модель заказа для ответа."""
+
     status: str = Field(..., description="Статус заказа")
     source: Optional[str] = Field(None, description="Источник заказа")
     delivery_service_level: str = Field(..., description="Уровень сервиса доставки")
@@ -185,25 +162,29 @@ class OrderResponse(BaseOrder, IdMixin):
 
 class OrderInDB(OrderResponse):
     """Модель заказа в БД."""
+
     pass
 
 
 class OrderAssign(Model):
     """Модель для назначения курьера."""
+
     courier_id: UUID = Field(..., description="ID курьера")
 
 
 class OrderDeliveryComplete(Model):
     """Модель для завершения доставки."""
+
     delivery_photo_url: Optional[str] = Field(None, description="URL фото доставки")
     recipient_signature: Optional[str] = Field(None, description="Подпись получателя")
 
 
 class OrderStatusUpdate(Model):
     """Модель для обновления статуса заказа."""
+
     status: str = Field(..., description="Новый статус заказа")
 
-    @validator('status')
+    @field_validator('status')
     def validate_status(cls, v):
         valid_statuses = [
             OrderStatus.CREATED,
@@ -219,6 +200,7 @@ class OrderStatusUpdate(Model):
 
 class OrderList(Model):
     """Модель для списка заказов."""
+
     orders: list[OrderResponse] = Field(..., description="Список заказов")
     total: int = Field(..., description="Общее количество заказов")
     page: int = Field(..., description="Номер страницы")

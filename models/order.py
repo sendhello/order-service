@@ -1,54 +1,15 @@
 import uuid
 from datetime import datetime, date, time
-from enum import Enum
+from enum import auto, StrEnum
 from typing import Self
 
 from db.postgres import Base, async_session
-from sqlalchemy import Column, String, DateTime, Text, select, ForeignKey, Boolean, Float, Date, Time
+from sqlalchemy import Column, String, DateTime, Text, select, ForeignKey, Boolean, Float, Date, Time, Enum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
+from constants.order import PackageType, ContentType, OrderStatus, DeliveryServiceLevel, PaymentMethod
 
 from .mixins import CRUDMixin, IDMixin
-
-
-class OrderStatus(str, Enum):
-    """Статусы заказа."""
-    CREATED = "created"
-    ASSIGNED = "assigned"
-    IN_PROGRESS = "in_progress"
-    DELIVERED = "delivered"
-    CANCELLED = "cancelled"
-
-
-class DeliveryServiceLevel(str, Enum):
-    """Уровни сервиса доставки."""
-    STANDARD = "standard"
-    EXPRESS = "express"
-
-
-class PackageType(str, Enum):
-    """Типы посылок."""
-    BOX = "box"
-    PACKAGE = "package"
-    ENVELOPE = "envelope"
-    OTHER = "other"
-
-
-class ContentType(str, Enum):
-    """Типы содержимого."""
-    LETTER = "letter"
-    FOOD = "food"
-    GROCERY = "grocery"
-    ELECTRONICS = "electronics"
-    CLOTHING = "clothing"
-    OTHER = "other"
-
-
-class PaymentMethod(str, Enum):
-    """Методы оплаты."""
-    PREPAID = "prepaid"
-    CASH_ON_DELIVERY = "cash_on_delivery"
-    CARD = "card"
 
 
 class PackageDetails(Base, IDMixin, CRUDMixin):
@@ -56,8 +17,8 @@ class PackageDetails(Base, IDMixin, CRUDMixin):
 
     __tablename__ = "package_details"
 
-    type = Column(String(20), default=PackageType.PACKAGE, nullable=False)
-    content_type = Column(String(20), default=ContentType.OTHER, nullable=False)
+    type = Column(Enum(PackageType, create_constraint=True), default=PackageType.PACKAGE, nullable=False)
+    content_type = Column(Enum(ContentType, create_constraint=True), default=ContentType.OTHER, nullable=False)
     description = Column(Text, nullable=True)
     length = Column(Float, nullable=True)  # в см
     width = Column(Float, nullable=True)   # в см
@@ -95,7 +56,7 @@ class Payment(Base, IDMixin, CRUDMixin):
 
     __tablename__ = "payments"
 
-    method = Column(String(20), default=PaymentMethod.PREPAID, nullable=False)
+    method = Column(Enum(PaymentMethod, create_constraint=True), default=PaymentMethod.PREPAID, nullable=False)
     sum = Column(Float, nullable=False)
 
 
@@ -107,9 +68,9 @@ class Order(Base, IDMixin, CRUDMixin):
     # Основная информация о заказе
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
-    status = Column(String(20), default=OrderStatus.CREATED, nullable=False)
+    status = Column(Enum(OrderStatus, create_constraint=True), default=OrderStatus.CREATED, nullable=False)
     source = Column(String(100), nullable=True)
-    delivery_service_level = Column(String(20), default=DeliveryServiceLevel.STANDARD, nullable=False)
+    delivery_service_level = Column(Enum(DeliveryServiceLevel, create_constraint=True), default=DeliveryServiceLevel.STANDARD, nullable=False)
     tracking_id = Column(UUID, default=lambda: str(uuid.uuid4()), nullable=False, unique=True)
     insurance_number = Column(String(100), nullable=True)
     special_instructions = Column(Text, nullable=True)
