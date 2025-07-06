@@ -1,34 +1,33 @@
 import uuid
-from datetime import datetime, date, time
-from enum import auto, StrEnum
+from datetime import datetime
 from typing import Self
 
-from db.postgres import Base, async_session
 from sqlalchemy import Column, String, DateTime, Text, select, ForeignKey, Boolean, Float, Date, Time, Enum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
-from constants.order import PackageType, ContentType, OrderStatus, DeliveryServiceLevel, PaymentMethod
 
+from constants.order import PackageType, ContentType, OrderStatus, DeliveryServiceLevel, PaymentMethod
+from db.postgres import Base, async_session
 from .mixins import CRUDMixin, IDMixin
 
 
 class PackageDetails(Base, IDMixin, CRUDMixin):
-    """Детали посылки."""
+    """Package details."""
 
     __tablename__ = "package_details"
 
     type = Column(Enum(PackageType, create_constraint=True), default=PackageType.PACKAGE, nullable=False)
     content_type = Column(Enum(ContentType, create_constraint=True), default=ContentType.OTHER, nullable=False)
     description = Column(Text, nullable=True)
-    length = Column(Float, nullable=True)  # в см
-    width = Column(Float, nullable=True)   # в см
-    height = Column(Float, nullable=True)  # в см
-    weight = Column(Float, nullable=True)  # в кг
+    length = Column(Float, nullable=True)  # in cm
+    width = Column(Float, nullable=True)   # in cm
+    height = Column(Float, nullable=True)  # in cm
+    weight = Column(Float, nullable=True)  # in kg
     is_fragile = Column(Boolean, default=False, nullable=False)
 
 
 class Parties(Base, IDMixin, CRUDMixin):
-    """Стороны (отправитель и получатель)."""
+    """Parties (sender and recipient)."""
 
     __tablename__ = "parties"
 
@@ -42,7 +41,7 @@ class Parties(Base, IDMixin, CRUDMixin):
 
 
 class DeliveryWindow(Base, IDMixin, CRUDMixin):
-    """Временное окно доставки."""
+    """Delivery time window."""
 
     __tablename__ = "delivery_windows"
 
@@ -52,7 +51,7 @@ class DeliveryWindow(Base, IDMixin, CRUDMixin):
 
 
 class Payment(Base, IDMixin, CRUDMixin):
-    """Информация об оплате."""
+    """Payment information."""
 
     __tablename__ = "payments"
 
@@ -61,11 +60,11 @@ class Payment(Base, IDMixin, CRUDMixin):
 
 
 class Order(Base, IDMixin, CRUDMixin):
-    """Модель заказа."""
+    """Order model."""
 
     __tablename__ = "orders"
 
-    # Основная информация о заказе
+    # Main order information
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     status = Column(Enum(OrderStatus, create_constraint=True), default=OrderStatus.CREATED, nullable=False)
@@ -76,19 +75,19 @@ class Order(Base, IDMixin, CRUDMixin):
     special_instructions = Column(Text, nullable=True)
     additional = Column(Text, nullable=True)
 
-    # Связи с другими таблицами
+    # Relations with other tables
     package_details_id = Column(UUID, ForeignKey('package_details.id'), nullable=True)
     sender_id = Column(UUID, ForeignKey('parties.id'), nullable=True)
     recipient_id = Column(UUID, ForeignKey('parties.id'), nullable=False)
     delivery_window_id = Column(UUID, ForeignKey('delivery_windows.id'), nullable=True)
     payment_id = Column(UUID, ForeignKey('payments.id'), nullable=True)
 
-    # Информация о доставке
+    # Delivery information
     courier_id = Column(UUID, nullable=True)
     assigned_at = Column(DateTime, nullable=True)
     delivered_at = Column(DateTime, nullable=True)
 
-    # Подтверждение доставки
+    # Delivery confirmation
     delivery_photo_url = Column(String(500), nullable=True)
     recipient_signature = Column(Text, nullable=True)
 
@@ -129,7 +128,7 @@ class Order(Base, IDMixin, CRUDMixin):
 
     @classmethod
     async def get_by_tracking_id(cls, tracking_id: uuid.UUID) -> Self:
-        """Получить заказ по tracking ID."""
+        """Get order by tracking ID."""
         async with async_session() as session:
             request = select(cls).where(cls.tracking_id == tracking_id)
             result = await session.execute(request)
@@ -138,7 +137,7 @@ class Order(Base, IDMixin, CRUDMixin):
 
     @classmethod
     async def get_by_status(cls, status: OrderStatus, page: int = 1, page_size: int = 20) -> list[Self]:
-        """Получить заказы по статусу."""
+        """Get orders by status."""
         async with async_session() as session:
             request = (
                 select(cls)
@@ -153,7 +152,7 @@ class Order(Base, IDMixin, CRUDMixin):
 
     @classmethod
     async def get_by_courier(cls, courier_id: UUID, page: int = 1, page_size: int = 20) -> list[Self]:
-        """Получить заказы курьера."""
+        """Get courier orders."""
         async with async_session() as session:
             request = (
                 select(cls)
@@ -167,14 +166,14 @@ class Order(Base, IDMixin, CRUDMixin):
         return orders
 
     async def assign_courier(self, courier_id: UUID, commit: bool = True) -> bool:
-        """Назначить курьера на заказ."""
+        """Assign courier to order."""
         self.courier_id = courier_id
         self.status = OrderStatus.ASSIGNED
         self.assigned_at = datetime.utcnow()
         return await self.save(commit=commit)
 
     async def start_delivery(self, commit: bool = True) -> bool:
-        """Начать доставку."""
+        """Start delivery."""
         self.status = OrderStatus.IN_PROGRESS
         return await self.save(commit=commit)
 
@@ -184,7 +183,7 @@ class Order(Base, IDMixin, CRUDMixin):
         recipient_signature: str = None, 
         commit: bool = True
     ) -> bool:
-        """Завершить доставку."""
+        """Complete delivery."""
         self.status = OrderStatus.DELIVERED
         self.delivered_at = datetime.utcnow()
         if delivery_photo_url:
@@ -194,7 +193,7 @@ class Order(Base, IDMixin, CRUDMixin):
         return await self.save(commit=commit)
 
     async def cancel_order(self, commit: bool = True) -> bool:
-        """Отменить заказ."""
+        """Cancel order."""
         self.status = OrderStatus.CANCELLED
         return await self.save(commit=commit)
 

@@ -11,79 +11,79 @@ from constants.order import PackageType, ContentType, OrderStatus, DeliveryServi
 
 # Schemas for new models
 class PackageDetailsBase(Model):
-    """Базовая модель деталей посылки."""
+    """Base package details model."""
 
-    type: str = Field(default=PackageType.PACKAGE, description="Тип посылки")
-    content_type: str = Field(default=ContentType.OTHER, description="Тип содержимого")
-    description: Optional[str] = Field(None, description="Описание")
-    length: Optional[float] = Field(None, description="Длина в см")
-    width: Optional[float] = Field(None, description="Ширина в см")
-    height: Optional[float] = Field(None, description="Высота в см")
-    weight: Optional[float] = Field(None, description="Вес в кг")
-    is_fragile: bool = Field(default=False, description="Хрупкое")
+    type: str = Field(default=PackageType.PACKAGE, description="Package type")
+    content_type: str = Field(default=ContentType.OTHER, description="Content type")
+    description: Optional[str] = Field(None, description="Description")
+    length: Optional[float] = Field(None, description="Length in cm")
+    width: Optional[float] = Field(None, description="Width in cm")
+    height: Optional[float] = Field(None, description="Height in cm")
+    weight: Optional[float] = Field(None, description="Weight in kg")
+    is_fragile: bool = Field(default=False, description="Fragile")
 
 
 class PackageDetailsCreate(PackageDetailsBase):
-    """Модель для создания деталей посылки."""
+    """Model for creating package details."""
 
     pass
 
 
 class PackageDetailsResponse(PackageDetailsBase, IdMixin):
-    """Модель деталей посылки для ответа."""
+    """Package details response model."""
 
     pass
 
 
 class PartiesBase(Model):
-    """Базовая модель стороны (отправитель/получатель)."""
+    """Base party model (sender/recipient)."""
 
-    company: Optional[str] = Field(None, description="Компания")
-    first_name: str = Field(..., description="Имя")
-    last_name: str = Field(..., description="Фамилия")
-    address: str = Field(..., description="Адрес")
-    phone: str = Field(..., description="Телефон")
+    company: Optional[str] = Field(None, description="Company")
+    first_name: str = Field(..., description="First name")
+    last_name: str = Field(..., description="Last name")
+    address: str = Field(..., description="Address")
+    phone: str = Field(..., description="Phone")
     email: Optional[str] = Field(None, description="Email")
-    additional: Optional[str] = Field(None, description="Дополнительная информация")
+    additional: Optional[str] = Field(None, description="Additional information")
 
 
 class PartiesCreate(PartiesBase):
-    """Модель для создания стороны."""
+    """Model for creating party."""
 
     pass
 
 
 class PartiesResponse(PartiesBase, IdMixin):
-    """Модель стороны для ответа."""
+    """Party response model."""
 
     pass
 
 
 class DeliveryWindowBase(Model):
-    """Базовая модель временного окна доставки."""
+    """Base delivery window model."""
 
-    date: date = Field(..., description="Дата")
-    time_from: Optional[time] = Field(None, description="Время с")
-    time_to: Optional[time] = Field(None, description="Время до")
+    date: date = Field(..., description="Date")
+    time_from: Optional[time] = Field(None, description="Time from")
+    time_to: Optional[time] = Field(None, description="Time to")
 
 
 class DeliveryWindowCreate(DeliveryWindowBase):
-    """Модель для создания временного окна доставки."""
+    """Model for creating delivery window."""
 
     pass
 
 
 class DeliveryWindowResponse(DeliveryWindowBase, IdMixin):
-    """Модель временного окна доставки для ответа."""
+    """Delivery window response model."""
 
     pass
 
 
 class PaymentBase(Model):
-    """Базовая модель оплаты."""
+    """Base payment model."""
 
-    method: str = Field(default=PaymentMethod.PREPAID, description="Метод оплаты")
-    sum: float = Field(..., description="Сумма")
+    method: str = Field(default=PaymentMethod.PREPAID, description="Payment method")
+    sum: float = Field(..., description="Amount")
 
 
 class PaymentCreate(PaymentBase):
