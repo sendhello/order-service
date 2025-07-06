@@ -1,6 +1,6 @@
-# Auth Service
+# Order Service
 
-Authentication and Authorization Service
+Order management service for courier delivery
 
 * **Application Language:** Python 3.13
 * **Supported Communication Protocols:** REST API
@@ -31,49 +31,61 @@ Or if you want to run it in development mode:
 export $(cat .env.local | xargs)
 docker compose -f docker-compose-dev.yml up
 python manage.py migrate
-python manage.py createsuperuser
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 ### Documentation
-* http://127.0.0.1/api/auth/openapi (Swagger)
-* http://127.0.0.1/api/auth/openapi.json (openapi)
+* http://127.0.0.1/api/orders/openapi (Swagger)
+* http://127.0.0.1/api/orders/openapi.json (openapi)
+
+## API Endpoints
+
+### Order Management
+* `POST /api/v1/orders/` - Create order
+* `GET /api/v1/orders/` - Get list of orders (with pagination and filtering)
+* `GET /api/v1/orders/{order_id}` - Get order by ID
+* `GET /api/v1/orders/tracking/{tracking_id}` - Get order by tracking ID
+* `PUT /api/v1/orders/{order_id}` - Update order
+* `DELETE /api/v1/orders/{order_id}` - Delete order
+
+### Delivery Management
+* `POST /api/v1/orders/{order_id}/assign` - Assign courier
+* `POST /api/v1/orders/{order_id}/start` - Start delivery
+* `POST /api/v1/orders/{order_id}/complete` - Complete delivery
+* `POST /api/v1/orders/{order_id}/cancel` - Cancel order
 
 ## Description of Additional Service Methods
 
 ### Running functional-tests
-Installing dependencies from requirements-dev.txt at the project root
+Installing dependencies from pyproject.toml at the project root
 
 ```commandline
-pytest -vv auth_service
+pytest -vv
 ```
 
 ### Running linters
-Installing dependencies from requirements-dev.txt at the project root
+Installing dependencies from pyproject.toml at the project root
 
 ```commandline
-isort auth_service
-flake8 auth_service
-black --skip-string-normalization auth_service
+isort .
+flake8 .
+black --skip-string-normalization .
 ```
 
 ### Description of ENV Variables
 
-| Variable Name            | Possible Value                                      | Description                                                             |
-|:-------------------------|-----------------------------------------------------|:------------------------------------------------------------------------|
-| DEBUG                    | False                                               | Debug mode                                                              |
-| PROJECT_NAME             | Auth                                                | Name of the service (displayed in Swagger)                              |
-| REDIS_HOST               | redis                                               | Redis server hostname                                                   |
-| REDIS_PORT               | 6379                                                | Redis server port                                                       |
-| PG_DSN                   | postgresql+asyncpg://app:123qwe@localhost:5433/auth | PostgreSQL database DSN (Data Source Name)                              |
-| SECRET_KEY               | secret                                              | Secret key                                                              |
-| JAEGER_TRACE             | True                                                | Enable Jaeger tracing                                                   |
-| JAEGER_AGENT_HOST        | localhost                                           | Jaeger agent host                                                       |
-| JAEGER_AGENT_PORT        | 6831                                                | Jaeger agent port                                                       |
-| REQUEST_LIMIT_PER_MINUTE | 20                                                  | Request rate limit (per minute). If set to 0, rate limiting is disabled |
-| GOOGLE_REDIRECT_URI      | http://localhost/api/v1/google/auth_return          | Google authentication redirect URI                                      |
-| GOOGLE_CLIENT_ID         | 6anqlc8.apps.googleusercontent.com                  | Google authentication client ID                                         |
-| GOOGLE_CLIENT_SECRET     | AAAAAA-sdsdsd-v-wiO2kwkWVIQ9JmsS62Y                 | Google authentication client secret                                     |
+| Variable Name            | Possible Value                                        | Description                                                             |
+|:-------------------------|-------------------------------------------------------|:------------------------------------------------------------------------|
+| DEBUG                    | False                                                 | Debug mode                                                              |
+| PROJECT_NAME             | Order Service                                         | Name of the service (displayed in Swagger)                              |
+| REDIS_HOST               | redis                                                 | Redis server hostname                                                   |
+| REDIS_PORT               | 6379                                                  | Redis server port                                                       |
+| PG_DSN                   | postgresql+asyncpg://app:123qwe@localhost:5433/orders | PostgreSQL database DSN (Data Source Name)                              |
+| SECRET_KEY               | secret                                                | JWT secret key for authentication                                       |
+| JAEGER_TRACE             | True                                                  | Enable Jaeger tracing                                                   |
+| JAEGER_AGENT_HOST        | localhost                                             | Jaeger agent host                                                       |
+| JAEGER_AGENT_PORT        | 6831                                                  | Jaeger agent port                                                       |
+| REQUEST_LIMIT_PER_MINUTE | 20                                                    | Request rate limit (per minute). If set to 0, rate limiting is disabled |
 
-### Creating a Superuser
-A superuser is created automatically with the login admin@example.com and the password admin.
+### Authentication
+This service uses JWT authentication. All endpoints require a valid JWT token in the Authorization header.
