@@ -23,10 +23,10 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     lifespan=lifespan,
     title=settings.project_name,
-    description="Сервис аутентификации и авторизации",
+    description="Сервис управления заказами для курьерской доставки",
     version="1.0.0",
-    docs_url="/api/auth/openapi",
-    openapi_url="/api/auth/openapi.json",
+    docs_url="/api/orders/openapi",
+    openapi_url="/api/orders/openapi.json",
     default_response_class=ORJSONResponse,
 )
 
