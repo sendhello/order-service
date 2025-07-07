@@ -67,19 +67,6 @@ class DeliveryWindow(Base, IDMixin, CRUDMixin):
     order = relationship("Order", back_populates="delivery_windows")
 
 
-class Payment(Base, IDMixin, CRUDMixin):
-    """Payment information."""
-
-    __tablename__ = "payments"
-
-    method = Column(Enum(PaymentMethod, create_constraint=True), default=PaymentMethod.PREPAID, nullable=False)
-    amount = Column(Numeric(10, 2), nullable=False)
-
-    order_id = Column(UUID, ForeignKey('orders.id', ondelete="CASCADE"), nullable=False)
-
-    order = relationship("Order", back_populates="payments")
-
-
 class Order(Base, IDMixin, CRUDMixin):
     """Order model."""
 
@@ -92,6 +79,9 @@ class Order(Base, IDMixin, CRUDMixin):
     source = Column(String(100), nullable=True)
     delivery_service_level = Column(Enum(DeliveryServiceLevel, name="delivery_service_level", native_enum=True), default=DeliveryServiceLevel.STANDARD, nullable=False)
     tracking_id = Column(UUID, default=lambda: str(uuid.uuid4()), nullable=False, unique=True)
+    payment_method = Column(Enum(PaymentMethod, name="payment_method", native_enum=True), default=PaymentMethod.CASH_ON_DELIVERY, nullable=False)
+    payment_status = Column(Boolean, default=False, nullable=False)
+    payment_amount = Column(Numeric(10, 2), nullable=True)
     insurance_number = Column(String(100), nullable=True)
     special_instructions = Column(Text, nullable=True)
     additional = Column(Text, nullable=True)
@@ -114,7 +104,6 @@ class Order(Base, IDMixin, CRUDMixin):
     recipient = relationship("Party", foreign_keys=[recipient_id], back_populates="received_orders")
     package_details = relationship("PackageDetail", back_populates="order", passive_deletes=True)
     delivery_windows = relationship("DeliveryWindow", back_populates="order", passive_deletes=True)
-    payments = relationship("Payment", back_populates="order", passive_deletes=True)
 
     __table_args__ = (
         Index("ix_orders_courier_id", "courier_id"),
@@ -128,10 +117,10 @@ class Order(Base, IDMixin, CRUDMixin):
         description: str = None,
         source: str = None,
         delivery_service_level: str = DeliveryServiceLevel.STANDARD,
-        package_details_id: uuid.UUID = None,
         sender_id: uuid.UUID = None,
-        delivery_window_id: uuid.UUID = None,
-        payment_id: uuid.UUID = None,
+        payment_method: str = PaymentMethod.CASH_ON_DELIVERY,
+        payment_status: bool = False,
+        payment_amount: float = None,
         insurance_number: str = None,
         special_instructions: str = None,
         additional: str = None,
@@ -140,11 +129,11 @@ class Order(Base, IDMixin, CRUDMixin):
         self.description = description
         self.source = source
         self.delivery_service_level = delivery_service_level
-        self.package_details_id = package_details_id
         self.sender_id = sender_id
         self.recipient_id = recipient_id
-        self.delivery_window_id = delivery_window_id
-        self.payment_id = payment_id
+        self.payment_method = payment_method
+        self.payment_status = payment_status
+        self.payment_amount = payment_amount
         self.insurance_number = insurance_number
         self.special_instructions = special_instructions
         self.additional = additional

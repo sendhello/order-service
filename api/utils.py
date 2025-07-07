@@ -11,16 +11,16 @@ class PaginateQueryParams:
         page: Annotated[
             int,
             Query(
-                title="Номер страницы",
-                description="Номер возвращаемой страницы",
+                title="Page number",
+                description="Page number",
                 ge=1,
             ),
         ] = 1,
         page_size: Annotated[
             int,
             Query(
-                title="Размер страницы",
-                description="Число элементов на странице",
+                title="Page size",
+                description="Page size",
                 ge=1,
                 le=500,
             ),

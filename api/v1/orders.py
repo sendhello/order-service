@@ -1,99 +1,105 @@
-from typing import Optional
+from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
 from async_fastapi_jwt_auth import AuthJWT
-from security import PROTECTED
-from services.order_service import OrderService
+from fastapi import APIRouter, Depends, Query
+
+from api.utils import PaginateQueryParams
 from schemas.order import (
-    OrderCreate, 
-    OrderUpdate, 
-    OrderResponse, 
-    OrderList, 
-    OrderAssign, 
+    OrderCreate,
+    OrderUpdate,
+    OrderResponse,
+    OrderList,
+    OrderAssign,
     OrderDeliveryComplete
 )
-
+from services.order_service import OrderService
 
 router = APIRouter()
 
 
-@router.post("/", response_model=OrderResponse, summary="Создать заказ")
+@router.post("/", response_model=OrderResponse, summary="Create order")
 async def create_order(
     order_data: OrderCreate,
-    authorize: AuthJWT = Depends(PROTECTED[0])
+    authorize: AuthJWT = Depends()
 ) -> OrderResponse:
-    """Создание нового заказа."""
+    """Create a new order."""
 
     return await OrderService.create_order(order_data)
 
 
-@router.get("/", response_model=OrderList, summary="Получить список заказов")
+@router.get("/", response_model=OrderList, summary="Get list of orders")
 async def get_orders(
-    page: int = Query(1, ge=1, description="Номер страницы"),
-    page_size: int = Query(20, ge=1, le=100, description="Размер страницы"),
-    status: Optional[str] = Query(None, description="Фильтр по статусу"),
-    courier_id: Optional[UUID] = Query(None, description="Фильтр по курьеру"),
-    authorize: AuthJWT = Depends(PROTECTED[0])
+    paginate: Annotated[PaginateQueryParams, Depends(PaginateQueryParams)],
+    status: str | None = Query(None, description="Filter by status"),
+    courier_id: UUID | None = Query(None, description="Filter by courier"),
+    authorize: AuthJWT = Depends()
 ) -> OrderList:
-    """Получение списка заказов с возможностью фильтрации."""
-    return await OrderService.get_orders(page, page_size, status, courier_id)
+    """Get list of orders with filtering options."""
+    
+    return await OrderService.get_orders(paginate.page, paginate.page_size, status, courier_id)
 
 
-@router.get("/{order_id}", response_model=OrderResponse, summary="Получить заказ по ID")
+@router.get("/{order_id}", response_model=OrderResponse, summary="Get order by ID")
 async def get_order_by_id(
     order_id: UUID,
-    authorize: AuthJWT = Depends(PROTECTED[0])
+    authorize: AuthJWT = Depends()
 ) -> OrderResponse:
-    """Получение заказа по ID."""
+    """Get order by ID."""
+    
     return await OrderService.get_order_by_id(order_id)
 
 
-@router.get("/tracking/{tracking_id}", response_model=OrderResponse, summary="Получить заказ по tracking ID")
+@router.get("/tracking/{tracking_id}", response_model=OrderResponse, summary="Get order by tracking ID")
 async def get_order_by_tracking_id(
     tracking_id: UUID,
-    authorize: AuthJWT = Depends(PROTECTED[0])
+    authorize: AuthJWT = Depends()
 ) -> OrderResponse:
-    """Получение заказа по tracking ID."""
+    """Get order by tracking ID."""
+    
     return await OrderService.get_order_by_tracking_id(tracking_id)
 
 
-@router.put("/{order_id}", response_model=OrderResponse, summary="Обновить заказ")
+@router.put("/{order_id}", response_model=OrderResponse, summary="Update order")
 async def update_order(
     order_id: UUID,
     order_data: OrderUpdate,
-    authorize: AuthJWT = Depends(PROTECTED[0])
+    authorize: AuthJWT = Depends()
 ) -> OrderResponse:
-    """Обновление данных заказа."""
+    """Update order data."""
+    
     return await OrderService.update_order(order_id, order_data)
 
 
-@router.post("/{order_id}/assign", response_model=OrderResponse, summary="Назначить курьера")
+@router.post("/{order_id}/assign", response_model=OrderResponse, summary="Assign courier")
 async def assign_courier(
     order_id: UUID,
     assign_data: OrderAssign,
-    authorize: AuthJWT = Depends(PROTECTED[0])
+    authorize: AuthJWT = Depends()
 ) -> OrderResponse:
-    """Назначение курьера на заказ."""
+    """Assign courier to order."""
+    
     return await OrderService.assign_courier(order_id, assign_data.courier_id)
 
 
-@router.post("/{order_id}/start", response_model=OrderResponse, summary="Начать доставку")
+@router.post("/{order_id}/start", response_model=OrderResponse, summary="Start delivery")
 async def start_delivery(
     order_id: UUID,
-    authorize: AuthJWT = Depends(PROTECTED[0])
+    authorize: AuthJWT = Depends()
 ) -> OrderResponse:
-    """Начало доставки заказа."""
+    """Start order delivery."""
+    
     return await OrderService.start_delivery(order_id)
 
 
-@router.post("/{order_id}/complete", response_model=OrderResponse, summary="Завершить доставку")
+@router.post("/{order_id}/complete", response_model=OrderResponse, summary="Complete delivery")
 async def complete_delivery(
     order_id: UUID,
     completion_data: OrderDeliveryComplete,
-    authorize: AuthJWT = Depends(PROTECTED[0])
+    authorize: AuthJWT = Depends()
 ) -> OrderResponse:
-    """Завершение доставки заказа."""
+    """Complete order delivery."""
+    
     return await OrderService.complete_delivery(
         order_id, 
         completion_data.delivery_photo_url, 
@@ -101,20 +107,22 @@ async def complete_delivery(
     )
 
 
-@router.post("/{order_id}/cancel", response_model=OrderResponse, summary="Отменить заказ")
+@router.post("/{order_id}/cancel", response_model=OrderResponse, summary="Cancel order")
 async def cancel_order(
     order_id: UUID,
-    authorize: AuthJWT = Depends(PROTECTED[0])
+    authorize: AuthJWT = Depends()
 ) -> OrderResponse:
-    """Отмена заказа."""
+    """Cancel order."""
+    
     return await OrderService.cancel_order(order_id)
 
 
-@router.delete("/{order_id}", summary="Удалить заказ")
+@router.delete("/{order_id}", summary="Delete order")
 async def delete_order(
     order_id: UUID,
-    authorize: AuthJWT = Depends(PROTECTED[0])
+    authorize: AuthJWT = Depends()
 ) -> dict:
-    """Удаление заказа."""
+    """Delete order."""
+    
     await OrderService.delete_order(order_id)
-    return {"message": "Заказ успешно удален"}
+    return {"message": "Order successfully deleted"}
