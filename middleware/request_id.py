@@ -3,9 +3,9 @@ from fastapi.responses import ORJSONResponse
 
 
 class RequiredRequestIdMiddleware:
-    """Middleware для отклонения запросов без X-Request-Id заголовка
+    """Middleware for rejecting requests without X-Request-Id header
 
-    Нужно для гарантирования передачи ID запросов при включенной телеметрии
+    Required to guarantee request ID transmission when telemetry is enabled
     """
 
     async def __call__(self, request: Request, call_next, *args, **kwargs):

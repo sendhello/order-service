@@ -7,12 +7,12 @@ from pydantic import Field, PostgresDsn
 from pydantic_settings import BaseSettings
 
 
-# Применяем настройки логирования
+# Apply logging settings
 logging_config.dictConfig(LOGGING)
 
 
 class PostgresSettings(BaseSettings):
-    """Настройки Postgres."""
+    """Postgres settings."""
 
     echo_database: bool = False
     postgres_host: str
@@ -31,18 +31,18 @@ class PostgresSettings(BaseSettings):
 
 
 class Settings(PostgresSettings):
-    # Общие настройки
+    # General settings
     project_name: str = "Order Service"
     debug: bool = False
 
-    # Настройки Redis
+    # Redis settings
     redis_host: str = "127.0.0.1"
     redis_port: int = 6379
 
-    # Настройки AuthJWT
+    # AuthJWT settings
     authjwt_secret_key: str = "secret"
 
-    # Настройка телеметрии
+    # Telemetry settings
     jaeger_trace: bool = True
     jaeger_agent_host: str = "localhost"
     jaeger_agent_port: int = 6831

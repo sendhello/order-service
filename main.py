@@ -23,7 +23,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     lifespan=lifespan,
     title=settings.project_name,
-    description="Сервис управления заказами для курьерской доставки",
+    description="Order management service for courier delivery",
     version="1.0.0",
     docs_url="/api/orders/openapi",
     openapi_url="/api/orders/openapi.json",
@@ -31,13 +31,13 @@ app = FastAPI(
 )
 
 if settings.jaeger_trace:
-    # Отправка телеметрии в Jaeger
+    # Send telemetry to Jaeger
     configure_tracer()
     FastAPIInstrumentor.instrument_app(app)
     RedisInstrumentor().instrument()
 
 if not settings.debug:
-    # Делаем Header-поле X-Request-Id обязательным
+    # Make X-Request-Id header field mandatory
     app.middleware("http")(required_request_id)
 
 app.include_router(api_router, prefix="/api")
