@@ -48,9 +48,9 @@ class OrderService:
                 )
             )
 
-        order = OrderResponse.model_validate(order_db)
-        order.package_details = [PackageDetailsResponse.model_validate(package_detail_db) for package_detail_db in package_details_db]
-        order.delivery_windows = [DeliveryWindowResponse.model_validate(delivery_window_db) for delivery_window_db in delivery_windows_db]
+        order = OrderResponse.model_validate(order_db, from_attributes=True)
+        order.package_details = [PackageDetailsResponse.model_validate(package_detail_db, from_attributes=True) for package_detail_db in package_details_db]
+        order.delivery_windows = [DeliveryWindowResponse.model_validate(delivery_window_db, from_attributes=True) for delivery_window_db in delivery_windows_db]
         return order
 
     @staticmethod
@@ -92,7 +92,7 @@ class OrderService:
         total = await Order.total_count()
 
         order_responses = [
-            OrderResponse.model_validate(order) for order in orders
+            OrderResponse.model_validate(order, from_attributes=True) for order in orders
         ]
 
         return OrderList(
@@ -120,7 +120,7 @@ class OrderService:
         update_data = order_data.model_dump(exclude_unset=True)
         order = await order.update(**update_data)
 
-        return OrderResponse.model_validate(order)
+        return OrderResponse.model_validate(order, from_attributes=True)
 
     @staticmethod
     async def assign_courier(order_id: UUID, courier_id: UUID) -> OrderResponse:
@@ -137,7 +137,7 @@ class OrderService:
             )
 
         order = await order.assign_courier(courier_id)
-        return OrderResponse.model_validate(order)
+        return OrderResponse.model_validate(order, from_attributes=True)
 
     @staticmethod
     async def start_delivery(order_id: UUID) -> OrderResponse:
@@ -154,7 +154,7 @@ class OrderService:
             )
 
         await order.start_delivery()
-        return OrderResponse.model_validate(order)
+        return OrderResponse.model_validate(order, from_attributes=True)
 
     @staticmethod
     async def complete_delivery(
@@ -175,7 +175,7 @@ class OrderService:
             )
 
         await order.complete_delivery(delivery_photo_url, recipient_signature)
-        return OrderResponse.model_validate(order)
+        return OrderResponse.model_validate(order, from_attributes=True)
 
     @staticmethod
     async def cancel_order(order_id: UUID) -> OrderResponse:
@@ -192,7 +192,7 @@ class OrderService:
             )
 
         await order.cancel_order()
-        return OrderResponse.model_validate(order)
+        return OrderResponse.model_validate(order, from_attributes=True)
 
     @staticmethod
     async def delete_order(order_id: UUID) -> bool:

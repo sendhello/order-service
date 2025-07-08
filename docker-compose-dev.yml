@@ -2,9 +2,9 @@ version: '3.8'
 
 services:
 
-  auth_postgres:
-    container_name: auth_postgres
-    hostname: auth_postgres
+  order_postgres:
+    container_name: order_postgres
+    hostname: order_postgres
     image: postgres:15.2
     networks:
       - network
@@ -13,11 +13,11 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${AUTH_POSTGRES_DB}
+      POSTGRES_DB: ${ORDER_POSTGRES_DB}
     volumes:
-      - auth_data:/var/lib/postgresql/data/
+      - order_data:/var/lib/postgresql/data/
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U app -d auth" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${ORDER_POSTGRES_DB}" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -46,10 +46,8 @@ services:
       - network
 
 volumes:
-  pgdata:
-  auth_data:
+  order_data:
   redis_data:
-  elasticsearch_data:
 
 networks:
   network:

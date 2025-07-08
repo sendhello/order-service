@@ -22,11 +22,14 @@ class PostgresSettings(BaseSettings):
     postgres_password: str
 
     @property
-    def pg_dsn(self) -> str:
-        return (
-            f"postgresql+asyncpg://{self.postgres_user}"
-            f":{self.postgres_password}@{self.postgres_host}:"
-            f"{self.postgres_port}/{self.postgres_db}"
+    def pg_dsn(self) -> PostgresDsn:
+        return PostgresDsn.build(
+            scheme="postgresql+asyncpg",
+            username=self.postgres_user,
+            password=self.postgres_password,
+            host=self.postgres_host,
+            port=self.postgres_port,
+            path=self.postgres_db,
         )
 
 

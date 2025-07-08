@@ -50,7 +50,7 @@ class CRUDMixin:
     @classmethod
     async def total_count(cls) -> int:
         async with async_session() as session:
-            request = select(cls).with_only_columns([func.count()]).select_from(cls)
+            request = select(cls).with_only_columns(func.count()).select_from(cls)
             result = await session.execute(request)
             entities = result.scalar() or 0
 

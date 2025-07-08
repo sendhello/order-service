@@ -62,7 +62,7 @@ class PartiesResponse(PartiesBase, IdMixin):
 class DeliveryWindowBase(Model):
     """Base delivery window model."""
 
-    date: date = Field(..., description="Date")
+    day: date = Field(..., description="Date")
     time_from: time | None = Field(None, description="Time from")
     time_to: time | None = Field(None, description="Time to")
 

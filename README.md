@@ -28,7 +28,7 @@ Or if you want to run it in development mode:
 
 ```commandline
 # Create a .env.local file with the necessary environment variables
-export $(cat .env.local | xargs)
+export $(grep -v -E '^\s*(#|$)' .env.local | xargs)
 docker compose -f docker-compose-dev.yml up
 python manage.py migrate
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
@@ -76,16 +76,20 @@ black --skip-string-normalization .
 
 | Variable Name            | Possible Value                                        | Description                                                             |
 |:-------------------------|-------------------------------------------------------|:------------------------------------------------------------------------|
-| DEBUG                    | False                                                 | Debug mode                                                              |
+| DEBUG                    | false                                                 | Debug mode                                                              |
 | PROJECT_NAME             | Order Service                                         | Name of the service (displayed in Swagger)                              |
+| POSTGRES_HOST            | order-postgres                                        | PostgreSQL server hostname                                              |
+| POSTGRES_PORT            | 5432                                                  | PostgreSQL server port                                                  |
+| POSTGRES_DB              | orders                                                | PostgreSQL database name                                                |
+| POSTGRES_USER            | app                                                   | PostgreSQL username                                                     |
+| POSTGRES_PASSWORD        | ***                                                   | PostgreSQL password                                                     |
 | REDIS_HOST               | redis                                                 | Redis server hostname                                                   |
 | REDIS_PORT               | 6379                                                  | Redis server port                                                       |
-| PG_DSN                   | postgresql+asyncpg://app:123qwe@localhost:5433/orders | PostgreSQL database DSN (Data Source Name)                              |
-| SECRET_KEY               | secret                                                | JWT secret key for authentication                                       |
-| JAEGER_TRACE             | True                                                  | Enable Jaeger tracing                                                   |
-| JAEGER_AGENT_HOST        | localhost                                             | Jaeger agent host                                                       |
+| ALLOW_EMPTY_PASSWORD     | yes                                                   | Allow Redis to start without password (for development)                |
+| AUTHJWT_SECRET_KEY       | secret                                                | JWT secret key for authentication                                       |
+| JAEGER_TRACE             | true                                                  | Enable Jaeger tracing                                                   |
+| JAEGER_AGENT_HOST        | jaeger                                                | Jaeger agent host                                                       |
 | JAEGER_AGENT_PORT        | 6831                                                  | Jaeger agent port                                                       |
-| REQUEST_LIMIT_PER_MINUTE | 20                                                    | Request rate limit (per minute). If set to 0, rate limiting is disabled |
 
 ### Authentication
 This service uses JWT authentication. All endpoints require a valid JWT token in the Authorization header.
