@@ -37,6 +37,7 @@ class Settings(PostgresSettings):
     # General settings
     project_name: str = "Order Service"
     debug: bool = False
+    show_traceback: bool = False
 
     # Redis settings
     redis_host: str = "127.0.0.1"

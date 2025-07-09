@@ -13,8 +13,8 @@ from .order import (
     # New model schemas
     PackageDetailsCreate,
     PackageDetailsResponse,
-    PartiesCreate,
-    PartiesResponse,
+    PartyCreate,
+    PartyResponse,
     DeliveryWindowCreate,
     DeliveryWindowResponse,
     PaymentCreate,

@@ -35,7 +35,7 @@ class PackageDetailsResponse(PackageDetailsBase, IdMixin):
     pass
 
 
-class PartiesBase(Model):
+class PartyBase(Model):
     """Base party model (sender/recipient)."""
 
     company: str | None = Field(None, description="Company")
@@ -47,13 +47,13 @@ class PartiesBase(Model):
     additional: str | None = Field(None, description="Additional information")
 
 
-class PartiesCreate(PartiesBase):
+class PartyCreate(PartyBase):
     """Model for creating party."""
 
     pass
 
 
-class PartiesResponse(PartiesBase, IdMixin):
+class PartyResponse(PartyBase, IdMixin):
     """Party response model."""
 
     pass
@@ -118,9 +118,9 @@ class OrderCreate(BaseOrder):
     additional: str | None = Field(None, description="Additional information")
 
     # Related objects data
-    package_details: PackageDetailsCreate | None = Field(None, description="Package details")
-    sender: PartiesCreate | None = Field(None, description="Sender")
-    recipient: PartiesCreate = Field(..., description="Recipient")
+    package_details: list[PackageDetailsCreate] | None = Field(None, description="Package details")
+    sender: PartyCreate | None = Field(None, description="Sender")
+    recipient: PartyCreate = Field(..., description="Recipient")
     delivery_windows: list[DeliveryWindowCreate] = Field(default_factory=list, description="Delivery time windows")
 
 
@@ -154,8 +154,8 @@ class OrderResponse(BaseOrder, IdMixin):
     additional: str | None = Field(None, description="Additional information")
 
     # Related objects
-    sender: PartiesResponse | None = Field(None, description="Sender")
-    recipient: PartiesResponse | None = Field(None, description="Recipient")
+    sender: PartyResponse | None = Field(None, description="Sender")
+    recipient: PartyResponse | None = Field(None, description="Recipient")
     package_details: list[PackageDetailsResponse] = Field(default_factory=list, description="Package details")
     delivery_windows: list[DeliveryWindowResponse] = Field(default_factory=list, description="Delivery time window")
 

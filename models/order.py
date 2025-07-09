@@ -5,7 +5,7 @@ from typing import Self
 from sqlalchemy import Column, String, DateTime, Text, select, ForeignKey, Boolean, Float, Date, Time, Enum, Numeric, Index
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
-
+from sqlalchemy.orm import joinedload, relationship
 from constants.order import PackageType, ContentType, OrderStatus, DeliveryServiceLevel, PaymentMethod
 from db.postgres import Base, async_session
 from .mixins import CRUDMixin, IDMixin
@@ -31,7 +31,7 @@ class PackageDetail(Base, IDMixin, CRUDMixin):
 
 
 class Party(Base, IDMixin, CRUDMixin):
-    """Parties (sender and recipient)."""
+    """Party (sender and recipient)."""
 
     __tablename__ = "parties"
 
@@ -58,7 +58,7 @@ class DeliveryWindow(Base, IDMixin, CRUDMixin):
 
     __tablename__ = "delivery_windows"
 
-    date = Column(Date, nullable=False)
+    day = Column(Date, nullable=False)
     time_from = Column(Time, nullable=True)
     time_to = Column(Time, nullable=True)
 
@@ -92,8 +92,8 @@ class Order(Base, IDMixin, CRUDMixin):
 
     # Delivery information
     courier_id = Column(UUID, nullable=True)
-    assigned_at = Column(DateTime, nullable=True)
-    delivered_at = Column(DateTime, nullable=True)
+    assigned_at = Column(DateTime(timezone=True), nullable=True)
+    delivered_at = Column(DateTime(timezone=True), nullable=True)
 
     # Delivery confirmation
     delivery_photo_url = Column(String(500), nullable=True)
@@ -139,13 +139,26 @@ class Order(Base, IDMixin, CRUDMixin):
         self.additional = additional
 
     @classmethod
+    def _get_dependency_field_options(cls) -> tuple:
+        return (
+            joinedload(cls.sender),
+            joinedload(cls.recipient),
+            joinedload(cls.package_details),
+            joinedload(cls.delivery_windows)
+        )
+
+    @classmethod
     async def get_by_tracking_id(cls, tracking_id: uuid.UUID) -> Self:
         """Get order by tracking ID."""
 
         async with async_session() as session:
-            request = select(cls).where(cls.tracking_id == tracking_id)
+            request = (
+                select(cls)
+                .options(*cls._get_dependency_field_options())
+                .where(cls.tracking_id == tracking_id)
+            )
             result = await session.execute(request)
-            order = result.scalars().first()
+            order = result.scalars().unique().first()
         return order
 
     @classmethod
@@ -155,6 +168,42 @@ class Order(Base, IDMixin, CRUDMixin):
         async with async_session() as session:
             request = (
                 select(cls)
+                .options( * cls._get_dependency_field_options())
+                .where(cls.status == status)
+                .limit(page_size)
+                .offset((page - 1) * page_size)
+                .order_by(cls.created_at.desc())
+            )
+            result = await session.execute(request)
+            orders = result.scalars().unique().all()
+        return orders
+
+    @classmethod
+    async def get_by_courier(cls, courier_id: UUID, page: int = 1, page_size: int = 20) -> list[Self]:
+        """Get courier orders."""
+
+        async with async_session() as session:
+            request = (
+                select(cls)
+                .options(*cls._get_dependency_field_options())
+                .where(cls.courier_id == courier_id)
+                .limit(page_size)
+                .offset((page - 1) * page_size)
+                .order_by(cls.created_at.desc())
+            )
+            result = await session.execute(request)
+            orders = result.scalars().all()
+        return orders
+
+    @classmethod
+    async def get_by_status_and_courier(cls, status: OrderStatus, courier_id: UUID, page: int = 1, page_size: int = 20) -> list[Self]:
+        """Get courier orders in a status."""
+
+        async with async_session() as session:
+            request = (
+                select(cls)
+                .options(*cls._get_dependency_field_options())
+                .where(cls.courier_id == courier_id)
                 .where(cls.status == status)
                 .limit(page_size)
                 .offset((page - 1) * page_size)
@@ -165,20 +214,32 @@ class Order(Base, IDMixin, CRUDMixin):
         return orders
 
     @classmethod
-    async def get_by_courier(cls, courier_id: UUID, page: int = 1, page_size: int = 20) -> list[Self]:
-        """Get courier orders."""
-
+    async def get_all(cls, page: int = 1, page_size: int = 20) -> list[Self]:
         async with async_session() as session:
             request = (
                 select(cls)
-                .where(cls.courier_id == courier_id)
+                .options(*cls._get_dependency_field_options())
                 .limit(page_size)
                 .offset((page - 1) * page_size)
                 .order_by(cls.created_at.desc())
             )
             result = await session.execute(request)
-            orders = result.scalars().all()
-        return orders
+            entities = result.scalars().unique().all()
+
+        return entities
+
+    @classmethod
+    async def get_by_id(cls, id_: UUID) -> Self:
+        async with async_session() as session:
+            request = (
+                select(cls)
+                .options(*cls._get_dependency_field_options())
+                .where(cls.id == id_)
+            )
+            result = await session.execute(request)
+            entity = result.scalars().unique().first()
+
+        return entity
 
     async def assign_courier(self, courier_id: UUID, commit: bool = True) -> bool:
         """Assign a courier to order."""

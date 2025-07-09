@@ -7,8 +7,9 @@ from fastapi import HTTPException
 from starlette import status
 from constants.order import PackageType, PaymentMethod, ContentType
 from models.order import Order, OrderStatus, PackageDetail, Party, DeliveryWindow
-from schemas.order import OrderCreate, OrderUpdate, OrderResponse, OrderList, PackageDetailsResponse, DeliveryWindowResponse
+from schemas.order import OrderCreate, OrderUpdate, OrderResponse, OrderList, PackageDetailsResponse, DeliveryWindowResponse, PartyResponse
 from sqlalchemy.exc import IntegrityError
+from db.postgres import Base, async_session
 
 
 class OrderService:
@@ -18,40 +19,80 @@ class OrderService:
     async def create_order(order_data: OrderCreate) -> OrderResponse:
         """Create a new order."""
 
-        sender = None
-        if order_data.sender:
-            sender = await Party.create(**order_data.sender.model_dump())
+        async with async_session() as session:
+            sender = None
+            if order_data.sender:
+                sender = Party(**order_data.sender.model_dump())
+                session.add(sender)
+                await session.flush()
 
-        recipient = await Party.create(**order_data.recipient.model_dump())
+            recipient = Party(**order_data.recipient.model_dump())
+            session.add(recipient)
+            await session.flush()
 
-        order_db = await Order.create(
-            **order_data.model_dump(exclude={'sender', 'recipient', 'package_details', 'delivery_window'}, exclude_none=True),
-            sender_id=sender.id if sender is not None else None,
-            recipient_id=recipient.id,
-        )
+            order_db = Order(
+                **order_data.model_dump(exclude={'sender', 'recipient', 'package_details', 'delivery_windows'},
+                                        exclude_none=True),
+                sender_id=sender.id if sender is not None else None,
+                recipient_id=recipient.id,
+            )
+            session.add(order_db)
+            await session.flush()
 
-        package_details_db = []
-        for package_detail in order_data.package_details:
-            package_details_db.append(
-                PackageDetail.create(
+            package_details_db = []
+            for package_detail in order_data.package_details:
+                package_detail_db = PackageDetail(
                     **package_detail.model_dump(),
                     order_id=order_db.id,
                 )
-            )
+                session.add(package_detail_db)
+                package_details_db.append(package_detail_db)
 
-        delivery_windows_db = []
-        for delivery_window in order_data.delivery_windows:
-            delivery_windows_db.append(
-                DeliveryWindow.create(
+            delivery_windows_db = []
+            for delivery_window in order_data.delivery_windows:
+                delivery_window_db = DeliveryWindow(
                     **delivery_window.model_dump(),
                     order_id=order_db.id,
                 )
+                session.add(delivery_window_db)
+                delivery_windows_db.append(delivery_window_db)
+
+            await session.commit()
+            await session.refresh(order_db)
+
+            # Преобразуем в Pydantic модель
+            order_response = OrderResponse(
+                id=order_db.id,
+                title=order_db.title,
+                description=order_db.description,
+                status=order_db.status,
+                source=order_db.source,
+                delivery_service_level=order_db.delivery_service_level,
+                tracking_id=order_db.tracking_id,
+                payment_method=order_db.payment_method,
+                payment_status=order_db.payment_status,
+                payment_amount=order_db.payment_amount,
+                insurance_number=order_db.insurance_number,
+                special_instructions=order_db.special_instructions,
+                additional=order_db.additional,
+                sender=PartyResponse.model_validate(sender, from_attributes=True) if sender else None,
+                recipient=PartyResponse.model_validate(recipient, from_attributes=True),
+                package_details=[
+                    PackageDetailsResponse.model_validate(pkg, from_attributes=True)
+                    for pkg in package_details_db
+                ],
+                delivery_windows=[
+                    DeliveryWindowResponse.model_validate(win, from_attributes=True)
+                    for win in delivery_windows_db
+                ],
+                courier_id=order_db.courier_id,
+                assigned_at=order_db.assigned_at,
+                delivered_at=order_db.delivered_at,
+                delivery_photo_url=order_db.delivery_photo_url,
+                recipient_signature=order_db.recipient_signature,
             )
 
-        order = OrderResponse.model_validate(order_db, from_attributes=True)
-        order.package_details = [PackageDetailsResponse.model_validate(package_detail_db, from_attributes=True) for package_detail_db in package_details_db]
-        order.delivery_windows = [DeliveryWindowResponse.model_validate(delivery_window_db, from_attributes=True) for delivery_window_db in delivery_windows_db]
-        return order
+        return order_response
 
     @staticmethod
     async def get_order_by_id(order_id: UUID) -> OrderResponse:
@@ -61,7 +102,7 @@ class OrderService:
         if not order:
             raise HTTPException(status_code=404, detail="Order not found")
 
-        return OrderResponse(order)
+        return OrderResponse.model_validate(order, from_attributes=True)
 
     @staticmethod
     async def get_order_by_tracking_id(tracking_id: UUID) -> OrderResponse:
@@ -71,7 +112,7 @@ class OrderService:
         if not order:
             raise HTTPException(status_code=404, detail="Order not found")
 
-        return OrderResponse(order)
+        return OrderResponse.model_validate(order, from_attributes=True)
 
     @staticmethod
     async def get_orders(
@@ -82,7 +123,9 @@ class OrderService:
     ) -> OrderList:
         """Get list of orders with filtering."""
 
-        if status:
+        if status and courier_id:
+            orders = await Order.get_by_status_and_courier(status, courier_id, page, page_size)
+        elif status:
             orders = await Order.get_by_status(status, page, page_size)
         elif courier_id:
             orders = await Order.get_by_courier(courier_id, page, page_size)

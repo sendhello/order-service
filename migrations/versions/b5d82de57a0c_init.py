@@ -1,8 +1,8 @@
 """"init"
 
-Revision ID: b1836c9f4601
+Revision ID: b5d82de57a0c
 Revises: 
-Create Date: 2025-07-08 14:55:45.179994
+Create Date: 2025-07-09 17:36:53.871794
 
 """
 from alembic import op
@@ -11,7 +11,7 @@ from db import postgres
 
 
 # revision identifiers, used by Alembic.
-revision = 'b1836c9f4601'
+revision = 'b5d82de57a0c'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -52,8 +52,8 @@ def upgrade() -> None:
     sa.Column('sender_id', sa.UUID(), nullable=True),
     sa.Column('recipient_id', sa.UUID(), nullable=False),
     sa.Column('courier_id', sa.UUID(), nullable=True),
-    sa.Column('assigned_at', sa.DateTime(), nullable=True),
-    sa.Column('delivered_at', sa.DateTime(), nullable=True),
+    sa.Column('assigned_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('delivered_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('delivery_photo_url', sa.String(length=500), nullable=True),
     sa.Column('recipient_signature', sa.Text(), nullable=True),
     sa.Column('id', sa.UUID(), nullable=False),
@@ -67,7 +67,7 @@ def upgrade() -> None:
     )
     op.create_index('ix_orders_courier_id', 'orders', ['courier_id'], unique=False)
     op.create_table('delivery_windows',
-    sa.Column('date', sa.Date(), nullable=False),
+    sa.Column('day', sa.Date(), nullable=False),
     sa.Column('time_from', sa.Time(), nullable=True),
     sa.Column('time_to', sa.Time(), nullable=True),
     sa.Column('order_id', sa.UUID(), nullable=False),
