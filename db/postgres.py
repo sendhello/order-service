@@ -5,11 +5,11 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.orm import declarative_base
 
 
-# Создаём базовый класс для будущих моделей
+# Create base class for future models
 Base = declarative_base()
 
-# Создаём движок
-# Настройки подключения к БД передаём из переменных окружения, которые заранее загружены в файл настроек
+# Create engine
+# Database connection settings are passed from environment variables, which are pre-loaded in the settings file
 engine = create_async_engine(settings.pg_dsn.encoded_string(), echo=settings.debug, future=True)
 async_session = async_sessionmaker(engine, expire_on_commit=False)
 

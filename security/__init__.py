@@ -1,8 +1,6 @@
 from fastapi import Depends
 
-from .auth import full_protected, partial_protected, refresh_protected
+from .auth import protected
 
 
-PROTECTED = [Depends(full_protected)]
-PART_PROTECTED = [Depends(partial_protected)]
-REFRESH_PROTECTED = [Depends(refresh_protected)]
+PROTECTED = [Depends(protected)]

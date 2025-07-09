@@ -3,12 +3,12 @@ from datetime import datetime, timezone
 from typing import Self
 
 from db.postgres import async_session
-from sqlalchemy import Column, DateTime, select
+from sqlalchemy import Column, DateTime, select, func
 from sqlalchemy.dialects.postgresql import UUID
 
 
 class CRUDMixin:
-    """Mixin-класс предоставляющий частые CRUD операции над моделями."""
+    """Mixin class providing common CRUD operations for models."""
 
     @classmethod
     async def create(cls, commit=True, **kwargs) -> Self:
@@ -44,6 +44,15 @@ class CRUDMixin:
             request = select(cls).limit(page_size).offset((page - 1) * page_size)
             result = await session.execute(request)
             entities = result.scalars().all()
+
+        return entities
+
+    @classmethod
+    async def total_count(cls) -> int:
+        async with async_session() as session:
+            request = select(cls).with_only_columns(func.count()).select_from(cls)
+            result = await session.execute(request)
+            entities = result.scalar() or 0
 
         return entities
 

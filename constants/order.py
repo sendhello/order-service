@@ -2,7 +2,7 @@ from enum import StrEnum
 
 
 class OrderStatus(StrEnum):
-    """Статусы заказа."""
+    """Order statuses."""
 
     CREATED = "created"
     ASSIGNED = "assigned"
@@ -12,14 +12,14 @@ class OrderStatus(StrEnum):
 
 
 class DeliveryServiceLevel(StrEnum):
-    """Уровни сервиса доставки."""
+    """Delivery service levels."""
 
     STANDARD = "standard"
     EXPRESS = "express"
 
 
 class PackageType(StrEnum):
-    """Типы посылок."""
+    """Package types."""
 
     BOX = "box"
     PACKAGE = "package"
@@ -28,7 +28,7 @@ class PackageType(StrEnum):
 
 
 class ContentType(StrEnum):
-    """Типы содержимого."""
+    """Content types."""
 
     LETTER = "letter"
     FOOD = "food"
@@ -39,7 +39,7 @@ class ContentType(StrEnum):
 
 
 class PaymentMethod(StrEnum):
-    """Методы оплаты."""
+    """Payment methods."""
 
     PREPAID = "prepaid"
     CASH_ON_DELIVERY = "cash_on_delivery"

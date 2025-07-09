@@ -2,10 +2,9 @@
 from .order import (
     Order, 
     OrderStatus, 
-    PackageDetails, 
-    Parties, 
-    DeliveryWindow, 
-    Payment,
+    PackageDetail,
+    Party,
+    DeliveryWindow,
     DeliveryServiceLevel,
     PackageType,
     ContentType,

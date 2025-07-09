@@ -2,37 +2,35 @@ version: '3.8'
 
 services:
 
-  auth:
-    container_name: auth
-    hostname: auth
-    build: auth_service
+  order-service:
+    container_name: order-service
+    hostname: order-service
+    build: .
     environment:
       DEBUG: ${DEBUG}
-      PROJECT_NAME: ${AUTH_PROJECT_NAME}
+      PROJECT_NAME: ${PROJECT_NAME}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_DB: ${ORDER_POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       REDIS_HOST: ${REDIS_HOST}
       REDIS_PORT: ${REDIS_PORT}
-      PG_DSN: ${PG_DSN}
-      SECRET_KEY: ${SECRET_KEY}
+      AUTHJWT_SECRET_KEY: ${AUTHJWT_SECRET_KEY}
       JAEGER_TRACE: ${JAEGER_TRACE}
       JAEGER_AGENT_HOST: ${JAEGER_AGENT_HOST}
       JAEGER_AGENT_PORT: ${JAEGER_AGENT_PORT}
-      REQUEST_LIMIT_PER_MINUTE: ${REQUEST_LIMIT_PER_MINUTE}
-      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-      ADMIN_EMAIL: ${ADMIN_EMAIL}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
     networks:
       - network
     expose:
       - "8000"
     depends_on:
       - redis
-      - auth-postgres
+      - order-postgres
 
-  auth-postgres:
-    container_name: auth-postgres
-    hostname: auth-postgres
+  order-postgres:
+    container_name: order-postgres
+    hostname: order-postgres
     image: postgres:15.2
     networks:
       - network
@@ -41,11 +39,11 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${AUTH_POSTGRES_DB}
+      POSTGRES_DB: ${ORDER_POSTGRES_DB}
     volumes:
-      - auth_pgdata:/var/lib/postgresql/data/
+      - order_pgdata:/var/lib/postgresql/data/
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U app -d auth" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -73,17 +71,8 @@ services:
     networks:
       - network
 
-  mailhog:
-    image: jcalonso/mailhog:latest
-    expose:
-      - "1025"
-    ports:
-      - "8025:8025"  # web ui
-    networks:
-      - network
-
 volumes:
-  auth_pgdata:
+  order_pgdata:
   redis_data:
 
 networks:

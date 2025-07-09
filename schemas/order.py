@@ -3,7 +3,7 @@ from typing import Optional
 from uuid import UUID
 
 from pydantic import Field, field_validator
-
+from decimal import Decimal
 from .base import Model
 from .mixins import IdMixin
 from constants.order import PackageType, ContentType, OrderStatus, DeliveryServiceLevel, PaymentMethod
@@ -13,13 +13,13 @@ from constants.order import PackageType, ContentType, OrderStatus, DeliveryServi
 class PackageDetailsBase(Model):
     """Base package details model."""
 
-    type: str = Field(default=PackageType.PACKAGE, description="Package type")
-    content_type: str = Field(default=ContentType.OTHER, description="Content type")
-    description: Optional[str] = Field(None, description="Description")
-    length: Optional[float] = Field(None, description="Length in cm")
-    width: Optional[float] = Field(None, description="Width in cm")
-    height: Optional[float] = Field(None, description="Height in cm")
-    weight: Optional[float] = Field(None, description="Weight in kg")
+    type: PackageType = Field(default=PackageType.PACKAGE, description="Package type")
+    content_type: ContentType = Field(default=ContentType.OTHER, description="Content type")
+    description: str | None = Field(None, description="Description")
+    length: float | None = Field(None, description="Length in cm")
+    width: float | None = Field(None, description="Width in cm")
+    height: float | None = Field(None, description="Height in cm")
+    weight: float | None = Field(None, description="Weight in kg")
     is_fragile: bool = Field(default=False, description="Fragile")
 
 
@@ -35,25 +35,25 @@ class PackageDetailsResponse(PackageDetailsBase, IdMixin):
     pass
 
 
-class PartiesBase(Model):
+class PartyBase(Model):
     """Base party model (sender/recipient)."""
 
-    company: Optional[str] = Field(None, description="Company")
+    company: str | None = Field(None, description="Company")
     first_name: str = Field(..., description="First name")
     last_name: str = Field(..., description="Last name")
     address: str = Field(..., description="Address")
     phone: str = Field(..., description="Phone")
-    email: Optional[str] = Field(None, description="Email")
-    additional: Optional[str] = Field(None, description="Additional information")
+    email: str | None = Field(None, description="Email")
+    additional: str | None = Field(None, description="Additional information")
 
 
-class PartiesCreate(PartiesBase):
+class PartyCreate(PartyBase):
     """Model for creating party."""
 
     pass
 
 
-class PartiesResponse(PartiesBase, IdMixin):
+class PartyResponse(PartyBase, IdMixin):
     """Party response model."""
 
     pass
@@ -62,9 +62,9 @@ class PartiesResponse(PartiesBase, IdMixin):
 class DeliveryWindowBase(Model):
     """Base delivery window model."""
 
-    date: date = Field(..., description="Date")
-    time_from: Optional[time] = Field(None, description="Time from")
-    time_to: Optional[time] = Field(None, description="Time to")
+    day: date = Field(..., description="Date")
+    time_from: time | None = Field(None, description="Time from")
+    time_to: time | None = Field(None, description="Time to")
 
 
 class DeliveryWindowCreate(DeliveryWindowBase):
@@ -87,121 +87,115 @@ class PaymentBase(Model):
 
 
 class PaymentCreate(PaymentBase):
-    """Модель для создания оплаты."""
+    """Model for creating payment."""
 
     pass
 
 
 class PaymentResponse(PaymentBase, IdMixin):
-    """Модель оплаты для ответа."""
+    """Payment response model."""
 
     pass
 
 
 class BaseOrder(Model):
-    """Базовая модель заказа."""
+    """Base order model."""
 
-    title: str = Field(..., description="Название заказа")
-    description: Optional[str] = Field(None, description="Описание заказа")
+    title: str = Field(..., description="Order title")
+    description: str | None = Field(None, description="Order description")
 
 
 class OrderCreate(BaseOrder):
-    """Модель для создания заказа."""
+    """Model for creating order."""
 
-    source: Optional[str] = Field(None, description="Источник заказа")
-    delivery_service_level: str = Field(default=DeliveryServiceLevel.STANDARD, description="Уровень сервиса доставки")
-    insurance_number: Optional[str] = Field(None, description="Номер страховки")
-    special_instructions: Optional[str] = Field(None, description="Специальные инструкции")
-    additional: Optional[str] = Field(None, description="Дополнительная информация")
+    source: str | None = Field(None, description="Order source")
+    delivery_service_level: str = Field(default=DeliveryServiceLevel.STANDARD, description="Delivery service level")
+    payment_method: str = Field(default=PaymentMethod.CASH_ON_DELIVERY, description="Payment method")
+    payment_status: bool = Field(default=False, description="Payment status")
+    payment_amount: Decimal | None = Field(None, description="Payment amount")
+    insurance_number: str | None = Field(None, description="Insurance number")
+    special_instructions: str | None = Field(None, description="Special instructions")
+    additional: str | None = Field(None, description="Additional information")
 
     # Related objects data
-    package_details: Optional[PackageDetailsCreate] = Field(None, description="Детали посылки")
-    sender: Optional[PartiesCreate] = Field(None, description="Отправитель")
-    recipient: PartiesCreate = Field(..., description="Получатель")
-    delivery_window: Optional[DeliveryWindowCreate] = Field(None, description="Временное окно доставки")
-    payment: Optional[PaymentCreate] = Field(None, description="Информация об оплате")
+    package_details: list[PackageDetailsCreate] | None = Field(None, description="Package details")
+    sender: PartyCreate | None = Field(None, description="Sender")
+    recipient: PartyCreate = Field(..., description="Recipient")
+    delivery_windows: list[DeliveryWindowCreate] = Field(default_factory=list, description="Delivery time windows")
 
 
 class OrderUpdate(Model):
-    """Модель для обновления заказа."""
+    """Model for updating order."""
 
-    title: Optional[str] = Field(None, description="Название заказа")
-    description: Optional[str] = Field(None, description="Описание заказа")
-    source: Optional[str] = Field(None, description="Источник заказа")
-    delivery_service_level: Optional[str] = Field(None, description="Уровень сервиса доставки")
-    insurance_number: Optional[str] = Field(None, description="Номер страховки")
-    special_instructions: Optional[str] = Field(None, description="Специальные инструкции")
-    additional: Optional[str] = Field(None, description="Дополнительная информация")
+    title: str | None = Field(None, description="Order title")
+    description: str | None = Field(None, description="Order description")
+    source: str | None = Field(None, description="Order source")
+    delivery_service_level: str | None = Field(None, description="Delivery service level")
+    payment_method: str | None = Field(None, description="Payment method")
+    payment_status: bool | None = Field(None, description="Payment status")
+    payment_amount: Decimal | None = Field(None, description="Payment amount")
+    insurance_number: str | None = Field(None, description="Insurance number")
+    special_instructions: str | None = Field(None, description="Special instructions")
+    additional: str | None = Field(None, description="Additional information")
 
 
 class OrderResponse(BaseOrder, IdMixin):
-    """Модель заказа для ответа."""
+    """Order response model."""
 
-    status: str = Field(..., description="Статус заказа")
-    source: Optional[str] = Field(None, description="Источник заказа")
-    delivery_service_level: str = Field(..., description="Уровень сервиса доставки")
-    tracking_id: UUID = Field(..., description="ID отслеживания")
-    insurance_number: Optional[str] = Field(None, description="Номер страховки")
-    special_instructions: Optional[str] = Field(None, description="Специальные инструкции")
-    additional: Optional[str] = Field(None, description="Дополнительная информация")
+    status: OrderStatus = Field(..., description="Order status")
+    source: str | None = Field(None, description="Order source")
+    delivery_service_level: str = Field(..., description="Delivery service level")
+    tracking_id: UUID = Field(..., description="Tracking ID")
+    payment_method: str = Field(..., description="Payment method")
+    payment_status: bool = Field(..., description="Payment status")
+    payment_amount: Decimal | None = Field(None, description="Payment amount")
+    insurance_number: str | None = Field(None, description="Insurance number")
+    special_instructions: str | None = Field(None, description="Special instructions")
+    additional: str | None = Field(None, description="Additional information")
 
     # Related objects
-    package_details: Optional[PackageDetailsResponse] = Field(None, description="Детали посылки")
-    sender: Optional[PartiesResponse] = Field(None, description="Отправитель")
-    recipient: Optional[PartiesResponse] = Field(None, description="Получатель")
-    delivery_window: Optional[DeliveryWindowResponse] = Field(None, description="Временное окно доставки")
-    payment: Optional[PaymentResponse] = Field(None, description="Информация об оплате")
+    sender: PartyResponse | None = Field(None, description="Sender")
+    recipient: PartyResponse | None = Field(None, description="Recipient")
+    package_details: list[PackageDetailsResponse] = Field(default_factory=list, description="Package details")
+    delivery_windows: list[DeliveryWindowResponse] = Field(default_factory=list, description="Delivery time window")
 
     # Delivery info
-    courier_id: Optional[UUID] = Field(None, description="ID курьера")
-    assigned_at: Optional[datetime] = Field(None, description="Время назначения курьера")
-    delivered_at: Optional[datetime] = Field(None, description="Время доставки")
-    delivery_photo_url: Optional[str] = Field(None, description="URL фото доставки")
-    recipient_signature: Optional[str] = Field(None, description="Подпись получателя")
+    courier_id: UUID | None = Field(None, description="Courier ID")
+    assigned_at: datetime | None = Field(None, description="Courier assignment time")
+    delivered_at: datetime | None = Field(None, description="Delivery time")
+    delivery_photo_url: str | None = Field(None, description="Delivery photo URL")
+    recipient_signature: str | None = Field(None, description="Recipient signature")
 
 
 class OrderInDB(OrderResponse):
-    """Модель заказа в БД."""
+    """Order model in database."""
 
     pass
 
 
 class OrderAssign(Model):
-    """Модель для назначения курьера."""
+    """Model for courier assignment."""
 
-    courier_id: UUID = Field(..., description="ID курьера")
+    courier_id: UUID = Field(..., description="Courier ID")
 
 
 class OrderDeliveryComplete(Model):
-    """Модель для завершения доставки."""
+    """Model for delivery completion."""
 
-    delivery_photo_url: Optional[str] = Field(None, description="URL фото доставки")
-    recipient_signature: Optional[str] = Field(None, description="Подпись получателя")
+    delivery_photo_url: str | None = Field(None, description="Delivery photo URL")
+    recipient_signature: str | None = Field(None, description="Recipient signature")
 
 
 class OrderStatusUpdate(Model):
-    """Модель для обновления статуса заказа."""
+    """Model for order status update."""
 
-    status: str = Field(..., description="Новый статус заказа")
-
-    @field_validator('status')
-    def validate_status(cls, v):
-        valid_statuses = [
-            OrderStatus.CREATED,
-            OrderStatus.ASSIGNED,
-            OrderStatus.IN_PROGRESS,
-            OrderStatus.DELIVERED,
-            OrderStatus.CANCELLED
-        ]
-        if v not in valid_statuses:
-            raise ValueError(f'Недопустимый статус. Допустимые значения: {", ".join(valid_statuses)}')
-        return v
+    status: OrderStatus = Field(..., description="New order status")
 
 
 class OrderList(Model):
-    """Модель для списка заказов."""
+    """Model for order list."""
 
-    orders: list[OrderResponse] = Field(..., description="Список заказов")
-    total: int = Field(..., description="Общее количество заказов")
-    page: int = Field(..., description="Номер страницы")
-    page_size: int = Field(..., description="Размер страницы")
+    orders: list[OrderResponse] = Field(..., description="List of orders")
+    total: int = Field(..., description="Total number of orders")
+    page: int = Field(..., description="Page number")
+    page_size: int = Field(..., description="Page size")

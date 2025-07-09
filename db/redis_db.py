@@ -4,6 +4,6 @@ from redis.asyncio import Redis
 redis: Redis | None = None
 
 
-# Функция понадобится при внедрении зависимостей
+# Function will be needed when implementing dependencies
 async def get_redis() -> Redis:
     return redis
