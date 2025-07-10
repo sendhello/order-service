@@ -1,15 +1,16 @@
 from contextlib import asynccontextmanager
 
+from fastapi import FastAPI
+from fastapi.responses import ORJSONResponse
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.redis import RedisInstrumentor
+from redis.asyncio import Redis
+
 from api import router as api_router
 from core.settings import settings
 from core.tracer import configure_tracer
 from db import redis_db
-from fastapi import FastAPI
-from fastapi.responses import ORJSONResponse
-from middleware import required_request_id, exception_traceback_middleware
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from opentelemetry.instrumentation.redis import RedisInstrumentor
-from redis.asyncio import Redis
+from middleware import exception_traceback_middleware, required_request_id
 
 
 @asynccontextmanager

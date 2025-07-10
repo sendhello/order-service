@@ -7,8 +7,8 @@ from fastapi.security.http import HTTPBearer
 
 
 async def protected(
-        authorize: AuthJWT = Depends(),
-        credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False)),
+    authorize: AuthJWT = Depends(),
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False)),
 ) -> AuthJWT:
     try:
         await authorize.jwt_required()

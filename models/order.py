@@ -2,12 +2,27 @@ import uuid
 from datetime import datetime, timezone
 from typing import Self
 
-from sqlalchemy import Column, String, DateTime, Text, select, ForeignKey, Boolean, Float, Date, Time, Enum, Numeric, Index
+from sqlalchemy import (
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Index,
+    Numeric,
+    String,
+    Text,
+    Time,
+    select,
+)
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
 from sqlalchemy.orm import joinedload, relationship
-from constants.order import PackageType, ContentType, OrderStatus, DeliveryServiceLevel, PaymentMethod
+
+from constants.order import ContentType, DeliveryServiceLevel, OrderStatus, PackageType, PaymentMethod
 from db.postgres import Base, async_session
+
 from .mixins import CRUDMixin, IDMixin
 
 
@@ -17,15 +32,17 @@ class PackageDetail(Base, IDMixin, CRUDMixin):
     __tablename__ = "package_details"
 
     type = Column(Enum(PackageType, name="package_type", native_enum=True), default=PackageType.PACKAGE, nullable=False)
-    content_type = Column(Enum(ContentType, name="content_type", native_enum=True), default=ContentType.OTHER, nullable=False)
+    content_type = Column(
+        Enum(ContentType, name="content_type", native_enum=True), default=ContentType.OTHER, nullable=False
+    )
     description = Column(Text, nullable=True)
     length = Column(Float, nullable=True)  # in cm
-    width = Column(Float, nullable=True)   # in cm
+    width = Column(Float, nullable=True)  # in cm
     height = Column(Float, nullable=True)  # in cm
     weight = Column(Float, nullable=True)  # in kg
     is_fragile = Column(Boolean, default=False, nullable=False)
 
-    order_id = Column(UUID, ForeignKey('orders.id', ondelete="CASCADE"), nullable=False)
+    order_id = Column(UUID, ForeignKey("orders.id", ondelete="CASCADE"), nullable=False)
 
     order = relationship("Order", back_populates="package_details")
 
@@ -43,8 +60,8 @@ class Party(Base, IDMixin, CRUDMixin):
     email = Column(String(255), nullable=True)
     additional = Column(Text, nullable=True)
 
-    sent_orders = relationship("Order", foreign_keys='Order.sender_id', back_populates="sender")
-    received_orders = relationship("Order", foreign_keys='Order.recipient_id', back_populates="recipient")
+    sent_orders = relationship("Order", foreign_keys="Order.sender_id", back_populates="sender")
+    received_orders = relationship("Order", foreign_keys="Order.recipient_id", back_populates="recipient")
 
     __table_args__ = (
         Index("ix_parties_address", "address"),
@@ -62,7 +79,7 @@ class DeliveryWindow(Base, IDMixin, CRUDMixin):
     time_from = Column(Time, nullable=True)
     time_to = Column(Time, nullable=True)
 
-    order_id = Column(UUID, ForeignKey('orders.id', ondelete="CASCADE"), nullable=False)
+    order_id = Column(UUID, ForeignKey("orders.id", ondelete="CASCADE"), nullable=False)
 
     order = relationship("Order", back_populates="delivery_windows")
 
@@ -75,11 +92,21 @@ class Order(Base, IDMixin, CRUDMixin):
     # Main order information
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
-    status = Column(Enum(OrderStatus, name="order_status", native_enum=True), default=OrderStatus.CREATED, nullable=False)
+    status = Column(
+        Enum(OrderStatus, name="order_status", native_enum=True), default=OrderStatus.CREATED, nullable=False
+    )
     source = Column(String(100), nullable=True)
-    delivery_service_level = Column(Enum(DeliveryServiceLevel, name="delivery_service_level", native_enum=True), default=DeliveryServiceLevel.STANDARD, nullable=False)
+    delivery_service_level = Column(
+        Enum(DeliveryServiceLevel, name="delivery_service_level", native_enum=True),
+        default=DeliveryServiceLevel.STANDARD,
+        nullable=False,
+    )
     tracking_id = Column(UUID, default=lambda: str(uuid.uuid4()), nullable=False, unique=True)
-    payment_method = Column(Enum(PaymentMethod, name="payment_method", native_enum=True), default=PaymentMethod.CASH_ON_DELIVERY, nullable=False)
+    payment_method = Column(
+        Enum(PaymentMethod, name="payment_method", native_enum=True),
+        default=PaymentMethod.CASH_ON_DELIVERY,
+        nullable=False,
+    )
     payment_status = Column(Boolean, default=False, nullable=False)
     payment_amount = Column(Numeric(10, 2), nullable=True)
     insurance_number = Column(String(100), nullable=True)
@@ -87,8 +114,8 @@ class Order(Base, IDMixin, CRUDMixin):
     additional = Column(Text, nullable=True)
 
     # Relations with other tables
-    sender_id = Column(UUID, ForeignKey('parties.id', ondelete="RESTRICT"), nullable=True)
-    recipient_id = Column(UUID, ForeignKey('parties.id', ondelete="RESTRICT"), nullable=False)
+    sender_id = Column(UUID, ForeignKey("parties.id", ondelete="RESTRICT"), nullable=True)
+    recipient_id = Column(UUID, ForeignKey("parties.id", ondelete="RESTRICT"), nullable=False)
 
     # Delivery information
     courier_id = Column(UUID, nullable=True)
@@ -105,10 +132,7 @@ class Order(Base, IDMixin, CRUDMixin):
     package_details = relationship("PackageDetail", back_populates="order", passive_deletes=True)
     delivery_windows = relationship("DeliveryWindow", back_populates="order", passive_deletes=True)
 
-    __table_args__ = (
-        Index("ix_orders_courier_id", "courier_id"),
-    )
-
+    __table_args__ = (Index("ix_orders_courier_id", "courier_id"),)
 
     def __init__(
         self,
@@ -144,7 +168,7 @@ class Order(Base, IDMixin, CRUDMixin):
             joinedload(cls.sender),
             joinedload(cls.recipient),
             joinedload(cls.package_details),
-            joinedload(cls.delivery_windows)
+            joinedload(cls.delivery_windows),
         )
 
     @classmethod
@@ -152,11 +176,7 @@ class Order(Base, IDMixin, CRUDMixin):
         """Get order by tracking ID."""
 
         async with async_session() as session:
-            request = (
-                select(cls)
-                .options(*cls._get_dependency_field_options())
-                .where(cls.tracking_id == tracking_id)
-            )
+            request = select(cls).options(*cls._get_dependency_field_options()).where(cls.tracking_id == tracking_id)
             result = await session.execute(request)
             order = result.scalars().unique().first()
         return order
@@ -168,7 +188,7 @@ class Order(Base, IDMixin, CRUDMixin):
         async with async_session() as session:
             request = (
                 select(cls)
-                .options( * cls._get_dependency_field_options())
+                .options(*cls._get_dependency_field_options())
                 .where(cls.status == status)
                 .limit(page_size)
                 .offset((page - 1) * page_size)
@@ -196,7 +216,9 @@ class Order(Base, IDMixin, CRUDMixin):
         return orders
 
     @classmethod
-    async def get_by_status_and_courier(cls, status: OrderStatus, courier_id: UUID, page: int = 1, page_size: int = 20) -> list[Self]:
+    async def get_by_status_and_courier(
+        cls, status: OrderStatus, courier_id: UUID, page: int = 1, page_size: int = 20
+    ) -> list[Self]:
         """Get courier orders in a status."""
 
         async with async_session() as session:
@@ -231,11 +253,7 @@ class Order(Base, IDMixin, CRUDMixin):
     @classmethod
     async def get_by_id(cls, id_: UUID) -> Self:
         async with async_session() as session:
-            request = (
-                select(cls)
-                .options(*cls._get_dependency_field_options())
-                .where(cls.id == id_)
-            )
+            request = select(cls).options(*cls._get_dependency_field_options()).where(cls.id == id_)
             result = await session.execute(request)
             entity = result.scalars().unique().first()
 
@@ -256,10 +274,7 @@ class Order(Base, IDMixin, CRUDMixin):
         return await self.save(commit=commit)
 
     async def complete_delivery(
-        self, 
-        delivery_photo_url: str = None, 
-        recipient_signature: str = None, 
-        commit: bool = True
+        self, delivery_photo_url: str = None, recipient_signature: str = None, commit: bool = True
     ) -> bool:
         """Complete delivery."""
 

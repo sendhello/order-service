@@ -1,12 +1,13 @@
-from datetime import datetime, date, time
-from typing import Optional
+from datetime import date, datetime, time
+from decimal import Decimal
 from uuid import UUID
 
-from pydantic import Field, field_validator
-from decimal import Decimal
+from pydantic import Field
+
+from constants.order import ContentType, DeliveryServiceLevel, OrderStatus, PackageType, PaymentMethod
+
 from .base import Model
 from .mixins import IdMixin
-from constants.order import PackageType, ContentType, OrderStatus, DeliveryServiceLevel, PaymentMethod
 
 
 # Schemas for new models

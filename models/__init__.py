@@ -1,12 +1,12 @@
 # flake8: noqa
 from .order import (
-    Order, 
-    OrderStatus, 
-    PackageDetail,
-    Party,
-    DeliveryWindow,
-    DeliveryServiceLevel,
-    PackageType,
     ContentType,
-    PaymentMethod
+    DeliveryServiceLevel,
+    DeliveryWindow,
+    Order,
+    OrderStatus,
+    PackageDetail,
+    PackageType,
+    Party,
+    PaymentMethod,
 )
