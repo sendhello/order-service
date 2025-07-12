@@ -15,7 +15,7 @@ class PackageDetailsBase(Model):
     """Base package details model."""
 
     type: PackageType = Field(default=PackageType.PACKAGE, description="Package type")
-    content_type: ContentType = Field(default=ContentType.OTHER, description="Content type")
+    content_type: ContentType = Field(default=ContentType.LETTER, description="Content type")
     description: str | None = Field(None, description="Description")
     length: float | None = Field(None, description="Length in cm")
     width: float | None = Field(None, description="Width in cm")

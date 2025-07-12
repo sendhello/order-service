@@ -1,3 +1,4 @@
+import logging
 from typing import Optional
 from uuid import UUID
 
@@ -16,6 +17,9 @@ from schemas.order import (
 )
 
 
+logger = logging.getLogger(__name__)
+
+
 class OrderService:
     """Service for working with orders."""
 
@@ -26,13 +30,15 @@ class OrderService:
         async with async_session() as session:
             sender = None
             if order_data.sender:
-                sender = Party(**order_data.sender.model_dump())
-                session.add(sender)
-                await session.flush()
+                sender = await Party.get_by_phone(order_data.sender.phone)
+                if sender is None:
+                    sender = Party(**order_data.sender.model_dump())
+                    session.add(sender)
 
-            recipient = Party(**order_data.recipient.model_dump())
-            session.add(recipient)
-            await session.flush()
+            recipient = await Party.get_by_phone(order_data.recipient.phone)
+            if recipient is None:
+                recipient = Party(**order_data.recipient.model_dump())
+                session.add(recipient)
 
             order_db = Order(
                 **order_data.model_dump(

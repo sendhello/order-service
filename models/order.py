@@ -69,6 +69,17 @@ class Party(Base, IDMixin, CRUDMixin):
         Index("uq_parties_phone", "phone", unique=True),
     )
 
+    @classmethod
+    async def get_by_phone(cls, phone: str) -> Self | None:
+        """Get party by phone number."""
+
+        async with async_session() as session:
+            request = select(cls).where(cls.phone == phone)
+            result = await session.execute(request)
+            order = result.scalars().first()
+
+        return order
+
 
 class DeliveryWindow(Base, IDMixin, CRUDMixin):
     """Delivery time window."""
