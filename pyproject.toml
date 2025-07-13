@@ -77,11 +77,15 @@ lines_after_imports = 2
 
 
 [tool.flake8]
+target-version = "py313"
 max-line-length = 120
-extend-ignore = [
-    "W503",
-    "E402",
-    "E731",
+max-complexity = 7
+ignore = ["W503", "C901"]
+exclude = [
+    "venv",
+    ".venv",
+    "migrations/",
+    "tests/",
 ]
 
 
