@@ -66,18 +66,37 @@ class Party(Base, IDMixin, CRUDMixin):
     __table_args__ = (
         Index("ix_parties_address", "address"),
         Index("ix_parties_company", "company"),
-        Index("uq_parties_phone", "phone", unique=True),
+        Index("uq_parties_unique", "phone", "address", "first_name", "last_name", unique=True),
     )
 
     @classmethod
-    async def get_by_phone(cls, phone: str) -> Self | None:
-        """Get party by phone number."""
+    async def get_by_filter(
+        cls, phone: str, address: str | None = None, first_name: str | None = None, last_name: str | None = None
+    ) -> list[Self]:
+        """Get parties by phone and optional filters."""
 
         async with async_session() as session:
             request = select(cls).where(cls.phone == phone)
-            result = await session.execute(request)
-            order = result.scalars().first()
+            if address is not None:
+                request = request.where(cls.address == address)
+            if first_name is not None:
+                request = request.where(cls.first_name == first_name)
+            if last_name is not None:
+                request = request.where(cls.last_name == last_name)
 
+            result = await session.execute(request)
+            orders = result.scalars()
+
+        return orders
+
+    @classmethod
+    async def get_one_by_filter(
+        cls, phone: str, address: str | None = None, first_name: str | None = None, last_name: str | None = None
+    ) -> list[Self]:
+        """Get party by phone and optional filters."""
+
+        orders = await cls.get_by_filter(phone, address, first_name, last_name)
+        order = orders.first()
         return order
 
 
