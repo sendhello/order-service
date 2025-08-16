@@ -51,6 +51,8 @@ class Settings(PostgresSettings):
     jaeger_agent_host: str = "localhost"
     jaeger_agent_port: int = 6831
 
+    timezone: str = "Australia/Melbourne"
+
 
 @AuthJWT.load_config
 def get_config():

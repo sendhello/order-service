@@ -100,10 +100,10 @@ class Party(Base, IDMixin, CRUDMixin):
         return order
 
 
-class DeliveryWindow(Base, IDMixin, CRUDMixin):
+class TimeWindow(Base, IDMixin, CRUDMixin):
     """Delivery time window."""
 
-    __tablename__ = "delivery_windows"
+    __tablename__ = "time_windows"
 
     day = Column(Date, nullable=False)
     time_from = Column(Time, nullable=True)
@@ -111,7 +111,7 @@ class DeliveryWindow(Base, IDMixin, CRUDMixin):
 
     order_id = Column(UUID, ForeignKey("orders.id", ondelete="CASCADE"), nullable=False)
 
-    order = relationship("Order", back_populates="delivery_windows")
+    order = relationship("Order", back_populates="time_windows")
 
 
 class Order(Base, IDMixin, CRUDMixin):
@@ -160,7 +160,7 @@ class Order(Base, IDMixin, CRUDMixin):
     sender = relationship("Party", foreign_keys=[sender_id], back_populates="sent_orders")
     recipient = relationship("Party", foreign_keys=[recipient_id], back_populates="received_orders")
     package_details = relationship("PackageDetail", back_populates="order", passive_deletes=True)
-    delivery_windows = relationship("DeliveryWindow", back_populates="order", passive_deletes=True)
+    time_windows = relationship("TimeWindow", back_populates="order", passive_deletes=True)
 
     __table_args__ = (Index("ix_orders_courier_id", "courier_id"),)
 
@@ -198,7 +198,7 @@ class Order(Base, IDMixin, CRUDMixin):
             joinedload(cls.sender),
             joinedload(cls.recipient),
             joinedload(cls.package_details),
-            joinedload(cls.delivery_windows),
+            joinedload(cls.time_windows),
         )
 
     @classmethod

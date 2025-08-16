@@ -2,7 +2,7 @@
 from .order import (
     ContentType,
     DeliveryServiceLevel,
-    DeliveryWindow,
+    TimeWindow,
     Order,
     OrderStatus,
     PackageDetail,

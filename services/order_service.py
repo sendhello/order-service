@@ -5,9 +5,9 @@ from uuid import UUID
 from fastapi import HTTPException
 
 from db.postgres import async_session
-from models.order import DeliveryWindow, Order, OrderStatus, PackageDetail, Party
+from models.order import TimeWindow, Order, OrderStatus, PackageDetail, Party
 from schemas.order import (
-    DeliveryWindowResponse,
+    TimeWindowResponse,
     OrderCreate,
     OrderList,
     OrderResponse,
@@ -62,7 +62,7 @@ class OrderService:
 
             order_db = self.model(
                 **order_data.model_dump(
-                    exclude={"sender", "recipient", "package_details", "delivery_windows"}, exclude_none=True
+                    exclude={"sender", "recipient", "package_details", "time_windows"}, exclude_none=True
                 ),
                 sender_id=sender.id if sender is not None else None,
                 recipient_id=recipient.id,
@@ -79,14 +79,14 @@ class OrderService:
                 session.add(package_detail_db)
                 package_details_db.append(package_detail_db)
 
-            delivery_windows_db = []
-            for delivery_window in order_data.delivery_windows:
-                delivery_window_db = DeliveryWindow(
-                    **delivery_window.model_dump(),
+            time_windows_db = []
+            for time_window in order_data.time_windows:
+                time_window_db = TimeWindow(
+                    **time_window.model_dump(),
                     order_id=order_db.id,
                 )
-                session.add(delivery_window_db)
-                delivery_windows_db.append(delivery_window_db)
+                session.add(time_window_db)
+                time_windows_db.append(time_window_db)
 
             await session.commit()
             await session.refresh(order_db)
@@ -111,8 +111,8 @@ class OrderService:
                 package_details=[
                     PackageDetailsResponse.model_validate(pkg, from_attributes=True) for pkg in package_details_db
                 ],
-                delivery_windows=[
-                    DeliveryWindowResponse.model_validate(win, from_attributes=True) for win in delivery_windows_db
+                time_windows=[
+                    TimeWindowResponse.model_validate(win, from_attributes=True) for win in time_windows_db
                 ],
                 courier_id=order_db.courier_id,
                 assigned_at=order_db.assigned_at,

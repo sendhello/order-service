@@ -1,10 +1,11 @@
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timezone
+import zoneinfo
 from decimal import Decimal
 from uuid import UUID
 
 from pydantic import Field
-
-from constants.order import ContentType, DeliveryServiceLevel, OrderStatus, PackageType, PaymentMethod
+from core.settings import settings
+from constants.order import ContentType, DeliveryServiceLevel, OrderStatus, PackageType, PaymentMethod, OrderType
 
 from .base import Model
 from .mixins import IdMixin
@@ -43,6 +44,8 @@ class PartyBase(Model):
     first_name: str = Field(..., description="First name")
     last_name: str = Field(..., description="Last name")
     address: str = Field(..., description="Address")
+    lon: float = Field(..., description="Longitude")
+    lat: float = Field(..., description="Latitude")
     phone: str = Field(..., description="Phone")
     email: str | None = Field(None, description="Email")
     additional: str | None = Field(None, description="Additional information")
@@ -60,21 +63,21 @@ class PartyResponse(PartyBase, IdMixin):
     pass
 
 
-class DeliveryWindowBase(Model):
+class TimeWindowBase(Model):
     """Base delivery window model."""
 
-    day: date = Field(..., description="Date")
-    time_from: time | None = Field(None, description="Time from")
-    time_to: time | None = Field(None, description="Time to")
+    day: date = Field(default_factory=lambda: datetime.now(tz=zoneinfo.ZoneInfo(settings.timezone)).date(), description="Date")
+    time_from: time = Field(default_factory=lambda: time.min, description="Time from")
+    time_to: time = Field(default_factory=lambda: time.max, description="Time to")
 
 
-class DeliveryWindowCreate(DeliveryWindowBase):
+class TimeWindowCreate(TimeWindowBase):
     """Model for creating delivery window."""
 
     pass
 
 
-class DeliveryWindowResponse(DeliveryWindowBase, IdMixin):
+class TimeWindowResponse(TimeWindowBase, IdMixin):
     """Delivery window response model."""
 
     pass
@@ -110,7 +113,7 @@ class OrderCreate(BaseOrder):
     """Model for creating order."""
 
     source: str | None = Field(None, description="Order source")
-    delivery_service_level: str = Field(default=DeliveryServiceLevel.STANDARD, description="Delivery service level")
+    delivery_service_level: DeliveryServiceLevel = Field(default=DeliveryServiceLevel.STANDARD, description="Delivery service level")
     payment_method: str = Field(default=PaymentMethod.CASH_ON_DELIVERY, description="Payment method")
     payment_status: bool = Field(default=False, description="Payment status")
     payment_amount: Decimal | None = Field(None, description="Payment amount")
@@ -122,7 +125,7 @@ class OrderCreate(BaseOrder):
     package_details: list[PackageDetailsCreate] | None = Field(None, description="Package details")
     sender: PartyCreate | None = Field(None, description="Sender")
     recipient: PartyCreate = Field(..., description="Recipient")
-    delivery_windows: list[DeliveryWindowCreate] = Field(default_factory=list, description="Delivery time windows")
+    time_windows: list[TimeWindowCreate] = Field(default_factory=list, description="Delivery time windows")
 
 
 class OrderUpdate(Model):
@@ -131,7 +134,7 @@ class OrderUpdate(Model):
     title: str | None = Field(None, description="Order title")
     description: str | None = Field(None, description="Order description")
     source: str | None = Field(None, description="Order source")
-    delivery_service_level: str | None = Field(None, description="Delivery service level")
+    delivery_service_level: DeliveryServiceLevel = Field(default=DeliveryServiceLevel.STANDARD, description="Delivery service level")
     payment_method: str | None = Field(None, description="Payment method")
     payment_status: bool | None = Field(None, description="Payment status")
     payment_amount: Decimal | None = Field(None, description="Payment amount")
@@ -143,9 +146,10 @@ class OrderUpdate(Model):
 class OrderResponse(BaseOrder, IdMixin):
     """Order response model."""
 
+    type: OrderType = Field(..., description="Order type")
     status: OrderStatus = Field(..., description="Order status")
     source: str | None = Field(None, description="Order source")
-    delivery_service_level: str = Field(..., description="Delivery service level")
+    delivery_service_level: DeliveryServiceLevel = Field(default=DeliveryServiceLevel.STANDARD, description="Delivery service level")
     tracking_id: UUID = Field(..., description="Tracking ID")
     payment_method: str = Field(..., description="Payment method")
     payment_status: bool = Field(..., description="Payment status")
@@ -158,7 +162,7 @@ class OrderResponse(BaseOrder, IdMixin):
     sender: PartyResponse | None = Field(None, description="Sender")
     recipient: PartyResponse | None = Field(None, description="Recipient")
     package_details: list[PackageDetailsResponse] = Field(default_factory=list, description="Package details")
-    delivery_windows: list[DeliveryWindowResponse] = Field(default_factory=list, description="Delivery time window")
+    time_windows: list[TimeWindowResponse] = Field(default_factory=list, description="Delivery time window")
 
     # Delivery info
     courier_id: UUID | None = Field(None, description="Courier ID")
