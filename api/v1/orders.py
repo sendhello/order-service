@@ -3,25 +3,25 @@ from uuid import UUID
 
 from async_fastapi_jwt_auth import AuthJWT
 from fastapi import APIRouter, Depends, Path, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-from security import DISPATCHER_REQUIRED, COURIER_REQUIRED, ADMIN_REQUIRED, OWNER_REQUIRED
+
 from api.utils import PaginateQueryParams
 from constants.order import OrderStatus
 from schemas.order import OrderAssign, OrderCreate, OrderDeliveryComplete, OrderList, OrderResponse, OrderUpdate
-from security import get_org_session, multitenancy_protected
+from security import (
+    DISPATCHER_REQUIRED,
+    multitenancy_protected,
+)
 from services.order_service import order_service
-
 
 router = APIRouter()
 
 
 @router.post("/", response_model=OrderResponse, summary="Create order", dependencies=DISPATCHER_REQUIRED)
 async def create_order(
-    order_data: OrderCreate,
-    auth_data: tuple[AuthJWT, dict, str] = Depends(multitenancy_protected)
+    order_data: OrderCreate, auth_data: tuple[AuthJWT, dict, str] = Depends(multitenancy_protected)
 ) -> OrderResponse:
     """Create a new order."""
-    
+
     _, _, org_id = auth_data
     return await order_service.create_order(order_data, current_org=org_id)
 
@@ -31,7 +31,7 @@ async def get_orders(
     paginate: Annotated[PaginateQueryParams, Depends(PaginateQueryParams)],
     status: OrderStatus = Query(None, description="Filter by status"),
     courier_id: UUID = Query(None, description="Filter by status"),
-    auth_data: tuple[AuthJWT, dict, str] = Depends(multitenancy_protected)
+    auth_data: tuple[AuthJWT, dict, str] = Depends(multitenancy_protected),
 ) -> OrderList:
     """Get list of orders with filtering options."""
 
@@ -42,7 +42,7 @@ async def get_orders(
 @router.get("/{order_id}", response_model=OrderResponse, summary="Get order by ID", dependencies=DISPATCHER_REQUIRED)
 async def get_order_by_id(
     order_id: UUID = Path(description="ID of the order to retrieve"),
-    auth_data: tuple[AuthJWT, dict, str] = Depends(multitenancy_protected)
+    auth_data: tuple[AuthJWT, dict, str] = Depends(multitenancy_protected),
 ) -> OrderResponse:
     """Get order by ID."""
 
@@ -50,10 +50,15 @@ async def get_order_by_id(
     return await order_service.get_order_by_id(order_id, current_org=org_id)
 
 
-@router.get("/tracking/{tracking_id}", response_model=OrderResponse, summary="Get order by tracking ID", dependencies=DISPATCHER_REQUIRED)
+@router.get(
+    "/tracking/{tracking_id}",
+    response_model=OrderResponse,
+    summary="Get order by tracking ID",
+    dependencies=DISPATCHER_REQUIRED,
+)
 async def get_order_by_tracking_id(
     tracking_id: UUID = Path(description="Tracking ID of the order to retrieve"),
-    auth_data: tuple[AuthJWT, dict, str] = Depends(multitenancy_protected)
+    auth_data: tuple[AuthJWT, dict, str] = Depends(multitenancy_protected),
 ) -> OrderResponse:
     """Get order by tracking ID."""
 
@@ -65,7 +70,7 @@ async def get_order_by_tracking_id(
 async def update_order(
     order_data: OrderUpdate,
     order_id: UUID = Path(description="ID of the order to update"),
-    auth_data: tuple[AuthJWT, dict, str] = Depends(multitenancy_protected)
+    auth_data: tuple[AuthJWT, dict, str] = Depends(multitenancy_protected),
 ) -> OrderResponse:
     """Update order data."""
 
@@ -73,11 +78,13 @@ async def update_order(
     return await order_service.update_order(order_id, order_data, current_org=org_id)
 
 
-@router.post("/{order_id}/assign", response_model=OrderResponse, summary="Assign courier", dependencies=DISPATCHER_REQUIRED)
+@router.post(
+    "/{order_id}/assign", response_model=OrderResponse, summary="Assign courier", dependencies=DISPATCHER_REQUIRED
+)
 async def assign_courier(
     assign_data: OrderAssign,
     order_id: UUID = Path(description="ID of the order to assign courier"),
-    auth_data: tuple[AuthJWT, dict, str] = Depends(multitenancy_protected)
+    auth_data: tuple[AuthJWT, dict, str] = Depends(multitenancy_protected),
 ) -> OrderResponse:
     """Assign courier to order."""
 
@@ -85,10 +92,12 @@ async def assign_courier(
     return await order_service.assign_courier(order_id, assign_data.courier_id, current_org=org_id)
 
 
-@router.post("/{order_id}/start", response_model=OrderResponse, summary="Start delivery", dependencies=DISPATCHER_REQUIRED)
+@router.post(
+    "/{order_id}/start", response_model=OrderResponse, summary="Start delivery", dependencies=DISPATCHER_REQUIRED
+)
 async def start_delivery(
     order_id: UUID = Path(description="ID of the order to start delivery"),
-    auth_data: tuple[AuthJWT, dict, str] = Depends(multitenancy_protected)
+    auth_data: tuple[AuthJWT, dict, str] = Depends(multitenancy_protected),
 ) -> OrderResponse:
     """Start order delivery."""
 
@@ -96,11 +105,13 @@ async def start_delivery(
     return await order_service.start_delivery(order_id, current_org=org_id)
 
 
-@router.post("/{order_id}/complete", response_model=OrderResponse, summary="Complete delivery", dependencies=DISPATCHER_REQUIRED)
+@router.post(
+    "/{order_id}/complete", response_model=OrderResponse, summary="Complete delivery", dependencies=DISPATCHER_REQUIRED
+)
 async def complete_delivery(
     completion_data: OrderDeliveryComplete,
     order_id: UUID = Path(description="ID of the order to complete delivery"),
-    auth_data: tuple[AuthJWT, dict, str] = Depends(multitenancy_protected)
+    auth_data: tuple[AuthJWT, dict, str] = Depends(multitenancy_protected),
 ) -> OrderResponse:
     """Complete order delivery."""
 
@@ -110,10 +121,12 @@ async def complete_delivery(
     )
 
 
-@router.post("/{order_id}/cancel", response_model=OrderResponse, summary="Cancel order", dependencies=DISPATCHER_REQUIRED)
+@router.post(
+    "/{order_id}/cancel", response_model=OrderResponse, summary="Cancel order", dependencies=DISPATCHER_REQUIRED
+)
 async def cancel_order(
     order_id: UUID = Path(description="ID of the order to cancel"),
-    auth_data: tuple[AuthJWT, dict, str] = Depends(multitenancy_protected)
+    auth_data: tuple[AuthJWT, dict, str] = Depends(multitenancy_protected),
 ) -> OrderResponse:
     """Cancel order."""
 
@@ -124,7 +137,7 @@ async def cancel_order(
 @router.delete("/{order_id}", summary="Delete order", dependencies=DISPATCHER_REQUIRED)
 async def delete_order(
     order_id: UUID = Path(description="ID of the order to delete"),
-    auth_data: tuple[AuthJWT, dict, str] = Depends(multitenancy_protected)
+    auth_data: tuple[AuthJWT, dict, str] = Depends(multitenancy_protected),
 ) -> dict:
     """Delete order."""
 

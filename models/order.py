@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Self
 
 from sqlalchemy import (
@@ -7,6 +7,7 @@ from sqlalchemy import (
     Column,
     Date,
     DateTime,
+    Double,
     Enum,
     Float,
     ForeignKey,
@@ -16,14 +17,14 @@ from sqlalchemy import (
     Text,
     Time,
     UniqueConstraint,
-    select, Double,
-func
+    func,
+    select,
 )
-from constants import DEFAULT_ORG_ID
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import joinedload, relationship
 
-from constants.order import ContentType, DeliveryServiceLevel, OrderStatus, PackageType, PaymentMethod, OrderType
+from constants import DEFAULT_ORG_ID
+from constants.order import ContentType, DeliveryServiceLevel, OrderStatus, OrderType, PackageType, PaymentMethod
 from db.postgres import Base, get_session
 
 from .mixins import CRUDMixin, IDMixin
@@ -50,9 +51,7 @@ class PackageDetail(Base, IDMixin, CRUDMixin):
 
     order = relationship("Order", back_populates="package_details")
 
-    __table_args__ = (
-        UniqueConstraint("org_id", "order_id", name="uq_org_order_package_detail"),
-    )
+    __table_args__ = (UniqueConstraint("org_id", "order_id", name="uq_org_order_package_detail"),)
 
 
 class Party(Base, IDMixin, CRUDMixin):
@@ -84,8 +83,12 @@ class Party(Base, IDMixin, CRUDMixin):
 
     @classmethod
     async def get_by_filter(
-        cls, phone: str, address: str | None = None, first_name: str | None = None, last_name: str | None = None,
-        current_org: str = DEFAULT_ORG_ID
+        cls,
+        phone: str,
+        address: str | None = None,
+        first_name: str | None = None,
+        last_name: str | None = None,
+        current_org: str = DEFAULT_ORG_ID,
     ) -> list[Self]:
         """Get parties by phone and optional filters."""
 
@@ -99,14 +102,16 @@ class Party(Base, IDMixin, CRUDMixin):
                 request = request.where(cls.last_name == last_name)
 
             result = await session.execute(request)
-            orders = result.scalars().all()
-
-        return orders
+            return result.scalars().all()
 
     @classmethod
     async def get_one_by_filter(
-        cls, phone: str, address: str | None = None, first_name: str | None = None, last_name: str | None = None,
-            current_org: str = DEFAULT_ORG_ID
+        cls,
+        phone: str,
+        address: str | None = None,
+        first_name: str | None = None,
+        last_name: str | None = None,
+        current_org: str = DEFAULT_ORG_ID,
     ) -> list[Self]:
         """Get party by phone and optional filters."""
 
@@ -120,9 +125,7 @@ class Party(Base, IDMixin, CRUDMixin):
                 request = request.where(cls.last_name == last_name)
 
             result = await session.execute(request)
-            order = result.scalars().first()
-
-        return order
+            return result.scalars().first()
 
 
 class TimeWindow(Base, IDMixin, CRUDMixin):
@@ -139,9 +142,7 @@ class TimeWindow(Base, IDMixin, CRUDMixin):
 
     order = relationship("Order", back_populates="time_windows")
 
-    __table_args__ = (
-        Index("ix_org_order_time_window", "org_id", "order_id"),
-    )
+    __table_args__ = (Index("ix_org_order_time_window", "org_id", "order_id"),)
 
 
 class Order(Base, IDMixin, CRUDMixin):
@@ -155,9 +156,7 @@ class Order(Base, IDMixin, CRUDMixin):
     # Main order information
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
-    type = Column(
-        Enum(OrderType, name="order_type", native_enum=True), default=OrderType.SERVICE, nullable=False
-    )
+    type = Column(Enum(OrderType, name="order_type", native_enum=True), default=OrderType.SERVICE, nullable=False)
     status = Column(
         Enum(OrderStatus, name="order_status", native_enum=True), default=OrderStatus.CREATED, nullable=False
     )
@@ -209,16 +208,16 @@ class Order(Base, IDMixin, CRUDMixin):
         title: str,
         recipient_id: uuid.UUID,
         org_id: uuid.UUID,
-        description: str = None,
-        source: str = None,
+        description: str | None = None,
+        source: str | None = None,
         delivery_service_level: str = DeliveryServiceLevel.STANDARD,
-        sender_id: uuid.UUID = None,
+        sender_id: uuid.UUID | None = None,
         payment_method: str = PaymentMethod.CASH_ON_DELIVERY,
         payment_status: bool = False,
-        payment_amount: float = None,
-        insurance_number: str = None,
-        special_instructions: str = None,
-        additional: str = None,
+        payment_amount: float | None = None,
+        insurance_number: str | None = None,
+        special_instructions: str | None = None,
+        additional: str | None = None,
     ) -> None:
         self.org_id = org_id
         self.title = title
@@ -250,11 +249,12 @@ class Order(Base, IDMixin, CRUDMixin):
         async with get_session(current_org) as session:
             request = select(cls).options(*cls._get_dependency_field_options()).where(cls.tracking_id == tracking_id)
             result = await session.execute(request)
-            order = result.scalars().unique().first()
-        return order
+            return result.scalars().unique().first()
 
     @classmethod
-    async def get_by_status(cls, status: OrderStatus, page: int = 1, page_size: int = 20, current_org: str = DEFAULT_ORG_ID) -> tuple[list[Self], int]:
+    async def get_by_status(
+        cls, status: OrderStatus, page: int = 1, page_size: int = 20, current_org: str = DEFAULT_ORG_ID
+    ) -> tuple[list[Self], int]:
         """Get orders by status."""
 
         async with get_session(current_org) as session:
@@ -270,17 +270,16 @@ class Order(Base, IDMixin, CRUDMixin):
             orders = result.scalars().unique().all()
 
             # Count total number
-            total_query = (
-                select(func.count(cls.id))
-                .where(cls.status == status)
-            )
+            total_query = select(func.count(cls.id)).where(cls.status == status)
             total_result = await session.execute(total_query)
             total = total_result.scalar()
 
         return orders, total
 
     @classmethod
-    async def get_by_courier(cls, courier_id: UUID, page: int = 1, page_size: int = 20, current_org: str = DEFAULT_ORG_ID) -> tuple[list[Self], int]:
+    async def get_by_courier(
+        cls, courier_id: UUID, page: int = 1, page_size: int = 20, current_org: str = DEFAULT_ORG_ID
+    ) -> tuple[list[Self], int]:
         """Get courier orders."""
 
         async with get_session(current_org) as session:
@@ -296,10 +295,7 @@ class Order(Base, IDMixin, CRUDMixin):
             orders = result.scalars().all()
 
             # Count total number
-            total_query = (
-                select(func.count(cls.id))
-                .where(cls.courier_id == courier_id)
-            )
+            total_query = select(func.count(cls.id)).where(cls.courier_id == courier_id)
             total_result = await session.execute(total_query)
             total = total_result.scalar()
 
@@ -307,7 +303,12 @@ class Order(Base, IDMixin, CRUDMixin):
 
     @classmethod
     async def get_by_status_and_courier(
-        cls, status: OrderStatus, courier_id: UUID, page: int = 1, page_size: int = 20, current_org: str = DEFAULT_ORG_ID
+        cls,
+        status: OrderStatus,
+        courier_id: UUID,
+        page: int = 1,
+        page_size: int = 20,
+        current_org: str = DEFAULT_ORG_ID,
     ) -> tuple[list[Self], int]:
         """Get courier orders in a status."""
 
@@ -325,18 +326,16 @@ class Order(Base, IDMixin, CRUDMixin):
             orders = orders_result.scalars().all()
 
             # Count total number
-            total_query = (
-                select(func.count(cls.id))
-                .where(cls.courier_id == courier_id)
-                .where(cls.status == status)
-            )
+            total_query = select(func.count(cls.id)).where(cls.courier_id == courier_id).where(cls.status == status)
             total_result = await session.execute(total_query)
             total = total_result.scalar()
 
         return orders, total
 
     @classmethod
-    async def get_all(cls, page: int = 1, page_size: int = 20, current_org: str = DEFAULT_ORG_ID) -> tuple[list[Self], int]:
+    async def get_all(
+        cls, page: int = 1, page_size: int = 20, current_org: str = DEFAULT_ORG_ID
+    ) -> tuple[list[Self], int]:
         async with get_session(current_org) as session:
             request = (
                 select(cls)
@@ -349,9 +348,7 @@ class Order(Base, IDMixin, CRUDMixin):
             entities = result.scalars().unique().all()
 
             # Count total number
-            total_query = (
-                select(func.count(cls.id))
-            )
+            total_query = select(func.count(cls.id))
             total_result = await session.execute(total_query)
             total = total_result.scalar()
 
@@ -362,16 +359,14 @@ class Order(Base, IDMixin, CRUDMixin):
         async with get_session(current_org) as session:
             request = select(cls).options(*cls._get_dependency_field_options()).where(cls.id == id_)
             result = await session.execute(request)
-            entity = result.scalars().unique().first()
-
-        return entity
+            return result.scalars().unique().first()
 
     async def assign_courier(self, courier_id: UUID, commit: bool = True, current_org: str = DEFAULT_ORG_ID) -> bool:
         """Assign a courier to order."""
 
         self.courier_id = courier_id
         self.status = OrderStatus.ASSIGNED
-        self.assigned_at = datetime.now(timezone.utc)
+        self.assigned_at = datetime.now(UTC)
         return await self.save(commit=commit, current_org=current_org)
 
     async def start_delivery(self, commit: bool = True, current_org: str = DEFAULT_ORG_ID) -> bool:
@@ -381,12 +376,16 @@ class Order(Base, IDMixin, CRUDMixin):
         return await self.save(commit=commit, current_org=current_org)
 
     async def complete_delivery(
-        self, delivery_photo_url: str = None, recipient_signature: str = None, commit: bool = True, current_org: str = DEFAULT_ORG_ID
+        self,
+        delivery_photo_url: str | None = None,
+        recipient_signature: str | None = None,
+        commit: bool = True,
+        current_org: str = DEFAULT_ORG_ID,
     ) -> bool:
         """Complete delivery."""
 
         self.status = OrderStatus.DELIVERED
-        self.delivered_at = datetime.now(timezone.utc)
+        self.delivered_at = datetime.now(UTC)
         if delivery_photo_url:
             self.delivery_photo_url = delivery_photo_url
         if recipient_signature:

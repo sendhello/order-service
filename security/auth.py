@@ -11,7 +11,6 @@ from starlette import status
 from core.settings import settings
 from db.postgres import AsyncSession, get_session
 
-
 RULE_PROTECTED_TEXT = "No access to this resource. Please contact your administrator if you believe this is an error."
 
 

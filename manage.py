@@ -3,7 +3,6 @@ import subprocess
 
 import typer
 
-
 app = typer.Typer()
 
 
@@ -14,6 +13,7 @@ def makemigrations(text: str):
         ["alembic", "revision", "--autogenerate", "-m", f'"{text}"'],
         capture_output=True,
         text=True,
+        check=False,
     )
     print("Log:", result.stdout)
     print("Errors:", result.stderr)
@@ -22,7 +22,7 @@ def makemigrations(text: str):
 @app.command()
 def migrate():
     """Upgrade migration."""
-    result = subprocess.run(["alembic", "upgrade", "head"], capture_output=True, text=True)
+    result = subprocess.run(["alembic", "upgrade", "head"], capture_output=True, text=True, check=False)
     print("Log:", result.stdout)
     print("Errors:", result.stderr)
 
@@ -30,7 +30,7 @@ def migrate():
 @app.command()
 def rollback(migrate_hash: str):
     """Downgrade migration."""
-    result = subprocess.run(["alembic", "downgrade", migrate_hash], capture_output=True, text=True)
+    result = subprocess.run(["alembic", "downgrade", migrate_hash], capture_output=True, text=True, check=False)
     print("Log:", result.stdout)
     print("Errors:", result.stderr)
 

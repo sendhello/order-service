@@ -6,7 +6,6 @@ from pydantic_settings import BaseSettings
 
 from core.logger import LOGGING
 
-
 # Apply logging settings
 logging_config.dictConfig(LOGGING)
 

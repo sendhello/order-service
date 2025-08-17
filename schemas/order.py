@@ -1,12 +1,13 @@
-from datetime import date, datetime, time, timezone
 import zoneinfo
+from datetime import date, datetime, time
 from decimal import Decimal
+from typing import Self
 from uuid import UUID
 
-from pydantic import Field, ValidationError, model_validator
-from typing import Self
+from pydantic import Field, model_validator
+
+from constants.order import ContentType, DeliveryServiceLevel, OrderStatus, OrderType, PackageType, PaymentMethod
 from core.settings import settings
-from constants.order import ContentType, DeliveryServiceLevel, OrderStatus, PackageType, PaymentMethod, OrderType
 
 from .base import Model
 from .mixins import IdMixin
@@ -67,7 +68,9 @@ class PartyResponse(PartyBase, IdMixin):
 class TimeWindowBase(Model):
     """Base delivery window model."""
 
-    day: date = Field(default_factory=lambda: datetime.now(tz=zoneinfo.ZoneInfo(settings.timezone)).date(), description="Date")
+    day: date = Field(
+        default_factory=lambda: datetime.now(tz=zoneinfo.ZoneInfo(settings.timezone)).date(), description="Date"
+    )
     time_from: time = Field(default_factory=lambda: time.min, description="Time from")
     time_to: time = Field(default_factory=lambda: time.max, description="Time to")
 
@@ -114,7 +117,9 @@ class OrderCreate(BaseOrder):
     """Model for creating order."""
 
     source: str | None = Field(None, description="Order source")
-    delivery_service_level: DeliveryServiceLevel = Field(default=DeliveryServiceLevel.STANDARD, description="Delivery service level")
+    delivery_service_level: DeliveryServiceLevel = Field(
+        default=DeliveryServiceLevel.STANDARD, description="Delivery service level"
+    )
     payment_method: str = Field(default=PaymentMethod.CASH_ON_DELIVERY, description="Payment method")
     payment_status: bool = Field(default=False, description="Payment status")
     payment_amount: Decimal | None = Field(None, description="Payment amount")
@@ -134,10 +139,10 @@ class OrderCreate(BaseOrder):
             raise ValueError("At least one of sender or recipient must be provided")
 
         if (
-                self.sender.phone == self.recipient.phone
-                and self.sender.address == self.recipient.address
-                and self.sender.first_name == self.recipient.first_name
-                and self.sender.last_name == self.recipient.last_name
+            self.sender.phone == self.recipient.phone
+            and self.sender.address == self.recipient.address
+            and self.sender.first_name == self.recipient.first_name
+            and self.sender.last_name == self.recipient.last_name
         ):
             raise ValueError("Sender and recipient cannot be the same person with the same address and phone number")
 
@@ -150,7 +155,9 @@ class OrderUpdate(Model):
     title: str | None = Field(None, description="Order title")
     description: str | None = Field(None, description="Order description")
     source: str | None = Field(None, description="Order source")
-    delivery_service_level: DeliveryServiceLevel = Field(default=DeliveryServiceLevel.STANDARD, description="Delivery service level")
+    delivery_service_level: DeliveryServiceLevel = Field(
+        default=DeliveryServiceLevel.STANDARD, description="Delivery service level"
+    )
     payment_method: str | None = Field(None, description="Payment method")
     payment_status: bool | None = Field(None, description="Payment status")
     payment_amount: Decimal | None = Field(None, description="Payment amount")
@@ -165,7 +172,9 @@ class OrderResponse(BaseOrder, IdMixin):
     type: OrderType = Field(..., description="Order type")
     status: OrderStatus = Field(..., description="Order status")
     source: str | None = Field(None, description="Order source")
-    delivery_service_level: DeliveryServiceLevel = Field(default=DeliveryServiceLevel.STANDARD, description="Delivery service level")
+    delivery_service_level: DeliveryServiceLevel = Field(
+        default=DeliveryServiceLevel.STANDARD, description="Delivery service level"
+    )
     tracking_id: UUID = Field(..., description="Tracking ID")
     payment_method: str = Field(..., description="Payment method")
     payment_status: bool = Field(..., description="Payment status")

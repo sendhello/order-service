@@ -1,14 +1,12 @@
 import logging
-from typing import Optional
 from uuid import UUID
 
 from fastapi import HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
+
 from constants import DEFAULT_ORG_ID
 from db.postgres import get_session
-from models.order import TimeWindow, Order, OrderStatus, PackageDetail, Party
+from models.order import Order, OrderStatus, PackageDetail, Party, TimeWindow
 from schemas.order import (
-    TimeWindowResponse,
     OrderCreate,
     OrderList,
     OrderResponse,
@@ -16,8 +14,8 @@ from schemas.order import (
     PackageDetailsResponse,
     PartyCreate,
     PartyResponse,
+    TimeWindowResponse,
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +95,7 @@ class OrderService:
             await session.refresh(order_db)
 
             # Преобразуем в Pydantic модель
-            order_response = OrderResponse(
+            return OrderResponse(
                 id=order_db.id,
                 title=order_db.title,
                 description=order_db.description,
@@ -117,17 +115,13 @@ class OrderService:
                 package_details=[
                     PackageDetailsResponse.model_validate(pkg, from_attributes=True) for pkg in package_details_db
                 ],
-                time_windows=[
-                    TimeWindowResponse.model_validate(win, from_attributes=True) for win in time_windows_db
-                ],
+                time_windows=[TimeWindowResponse.model_validate(win, from_attributes=True) for win in time_windows_db],
                 courier_id=order_db.courier_id,
                 assigned_at=order_db.assigned_at,
                 delivered_at=order_db.delivered_at,
                 delivery_photo_url=order_db.delivery_photo_url,
                 recipient_signature=order_db.recipient_signature,
             )
-
-        return order_response
 
     async def get_order_by_id(self, order_id: UUID, current_org: str = DEFAULT_ORG_ID) -> OrderResponse:
         """Get order by ID."""
@@ -148,12 +142,19 @@ class OrderService:
         return OrderResponse.model_validate(order, from_attributes=True)
 
     async def get_orders(
-        self, page: int = 1, page_size: int = 20, status: OrderStatus | None = None, courier_id: UUID | None = None, current_org: str = DEFAULT_ORG_ID
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        status: OrderStatus | None = None,
+        courier_id: UUID | None = None,
+        current_org: str = DEFAULT_ORG_ID,
     ) -> OrderList:
         """Get list of orders with filtering."""
 
         if status and courier_id:
-            orders, total = await self.model.get_by_status_and_courier(status, courier_id, page, page_size, current_org=current_org)
+            orders, total = await self.model.get_by_status_and_courier(
+                status, courier_id, page, page_size, current_org=current_org
+            )
         elif status:
             orders, total = await self.model.get_by_status(status, page, page_size, current_org=current_org)
         elif courier_id:
@@ -165,7 +166,9 @@ class OrderService:
 
         return OrderList(orders=order_responses, total=total, page=page, page_size=page_size)
 
-    async def update_order(self, order_id: UUID, order_data: OrderUpdate, current_org: str = DEFAULT_ORG_ID) -> OrderResponse:
+    async def update_order(
+        self, order_id: UUID, order_data: OrderUpdate, current_org: str = DEFAULT_ORG_ID
+    ) -> OrderResponse:
         """Update order."""
 
         order = await self.model.get_by_id(order_id, current_org=current_org)
@@ -181,7 +184,9 @@ class OrderService:
 
         return OrderResponse.model_validate(order, from_attributes=True)
 
-    async def assign_courier(self, order_id: UUID, courier_id: UUID, current_org: str = DEFAULT_ORG_ID) -> OrderResponse:
+    async def assign_courier(
+        self, order_id: UUID, courier_id: UUID, current_org: str = DEFAULT_ORG_ID
+    ) -> OrderResponse:
         """Assign a courier to order."""
 
         order = await self.model.get_by_id(order_id, current_org=current_org)
@@ -208,7 +213,11 @@ class OrderService:
         return OrderResponse.model_validate(order, from_attributes=True)
 
     async def complete_delivery(
-        self, order_id: UUID, delivery_photo_url: Optional[str] = None, recipient_signature: Optional[str] = None, current_org: str = DEFAULT_ORG_ID
+        self,
+        order_id: UUID,
+        delivery_photo_url: str | None = None,
+        recipient_signature: str | None = None,
+        current_org: str = DEFAULT_ORG_ID,
     ) -> OrderResponse:
         """Complete order delivery."""
 
