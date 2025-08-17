@@ -1,6 +1,14 @@
 from enum import StrEnum
 
 
+class OrderType(StrEnum):
+    """Order types."""
+
+    PICKUP = "pickup"
+    DELIVERY = "delivery"
+    SERVICE = "service"
+
+
 class OrderStatus(StrEnum):
     """Order statuses."""
 

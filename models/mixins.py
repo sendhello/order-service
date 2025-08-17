@@ -1,37 +1,42 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Self
 
-from sqlalchemy import Column, DateTime, func, select
+from sqlalchemy import Column, DateTime, select
 from sqlalchemy.dialects.postgresql import UUID
 
-from db.postgres import async_session
+from constants import DEFAULT_ORG_ID
+from db.postgres import get_session
 
 
 class CRUDMixin:
     """Mixin class providing common CRUD operations for models."""
 
     @classmethod
-    async def create(cls, commit=True, **kwargs) -> Self:
-        instance = cls(**kwargs)
-        return await instance.save(commit=commit)
+    async def create(cls, commit: bool = True, current_org: str = DEFAULT_ORG_ID, **kwargs) -> Self:
+        instance = cls(**kwargs, org_id=current_org)
+        return await instance.save(commit=commit, current_org=current_org)
 
-    async def update(self, commit=True, **kwargs):
+    async def update(self, commit=True, current_org: str = DEFAULT_ORG_ID, **kwargs):
         for attr, value in kwargs.items():
             setattr(self, attr, value)
 
-        return await self.save(commit=commit)
+        return await self.save(commit=commit, current_org=current_org)
 
-    async def delete(self, commit=True):
-        async with async_session() as session:
+    async def delete(self, commit=True, current_org: str = DEFAULT_ORG_ID):
+        async with get_session(current_org) as session:
             await session.delete(self)
             if commit:
                 await session.commit()
 
         return self
 
-    async def save(self, commit=True):
-        async with async_session() as session:
+    async def save(self, commit=True, current_org: str = DEFAULT_ORG_ID):
+        """Save the current instance to the database.
+
+        In 'current_org' context, it will use the organization ID for multitenancy. Only from token
+        """
+        async with get_session(current_org) as session:
             session.add(self)
             if commit:
                 await session.commit()
@@ -41,21 +46,10 @@ class CRUDMixin:
 
     @classmethod
     async def get_all(cls, page: int = 1, page_size: int = 20) -> list[Self]:
-        async with async_session() as session:
+        async with get_session() as session:
             request = select(cls).limit(page_size).offset((page - 1) * page_size)
             result = await session.execute(request)
-            entities = result.scalars().all()
-
-        return entities
-
-    @classmethod
-    async def total_count(cls) -> int:
-        async with async_session() as session:
-            request = select(cls).with_only_columns(func.count()).select_from(cls)
-            result = await session.execute(request)
-            entities = result.scalar() or 0
-
-        return entities
+            return result.scalars().all()
 
 
 class IDMixin:
@@ -66,19 +60,17 @@ class IDMixin:
         unique=True,
         nullable=False,
     )
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)
     updated_at = Column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
         nullable=False,
     )
 
     @classmethod
-    async def get_by_id(cls, id_: UUID) -> Self:
-        async with async_session() as session:
+    async def get_by_id(cls, id_: UUID, current_org: str = DEFAULT_ORG_ID) -> Self:
+        async with get_session(current_org) as session:
             request = select(cls).where(cls.id == id_)
             result = await session.execute(request)
-            entity = result.scalars().first()
-
-        return entity
+            return result.scalars().first()

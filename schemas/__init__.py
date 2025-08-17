@@ -2,8 +2,8 @@
 from .order import (  # Order schemas; New model schemas; Enums
     ContentType,
     DeliveryServiceLevel,
-    DeliveryWindowCreate,
-    DeliveryWindowResponse,
+    TimeWindowCreate,
+    TimeWindowResponse,
     OrderAssign,
     OrderCreate,
     OrderDeliveryComplete,

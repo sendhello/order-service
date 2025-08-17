@@ -6,7 +6,6 @@ from pydantic_settings import BaseSettings
 
 from core.logger import LOGGING
 
-
 # Apply logging settings
 logging_config.dictConfig(LOGGING)
 
@@ -18,15 +17,28 @@ class PostgresSettings(BaseSettings):
     postgres_host: str
     postgres_port: int
     postgres_db: str
-    postgres_user: str
-    postgres_password: str
+    postgres_app_user: str
+    postgres_app_password: str
+    postgres_migrate_user: str
+    postgres_migrate_password: str
 
     @property
     def pg_dsn(self) -> PostgresDsn:
         return PostgresDsn.build(
             scheme="postgresql+asyncpg",
-            username=self.postgres_user,
-            password=self.postgres_password,
+            username=self.postgres_app_user,
+            password=self.postgres_app_password,
+            host=self.postgres_host,
+            port=self.postgres_port,
+            path=self.postgres_db,
+        )
+
+    @property
+    def migrate_pg_dsn(self) -> PostgresDsn:
+        return PostgresDsn.build(
+            scheme="postgresql+asyncpg",
+            username=self.postgres_migrate_user,
+            password=self.postgres_migrate_password,
             host=self.postgres_host,
             port=self.postgres_port,
             path=self.postgres_db,
@@ -50,6 +62,8 @@ class Settings(PostgresSettings):
     jaeger_trace: bool = True
     jaeger_agent_host: str = "localhost"
     jaeger_agent_port: int = 6831
+
+    timezone: str = "Australia/Melbourne"
 
 
 @AuthJWT.load_config
