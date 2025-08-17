@@ -18,15 +18,28 @@ class PostgresSettings(BaseSettings):
     postgres_host: str
     postgres_port: int
     postgres_db: str
-    postgres_user: str
-    postgres_password: str
+    postgres_app_user: str
+    postgres_app_password: str
+    postgres_migrate_user: str
+    postgres_migrate_password: str
 
     @property
     def pg_dsn(self) -> PostgresDsn:
         return PostgresDsn.build(
             scheme="postgresql+asyncpg",
-            username=self.postgres_user,
-            password=self.postgres_password,
+            username=self.postgres_app_user,
+            password=self.postgres_app_password,
+            host=self.postgres_host,
+            port=self.postgres_port,
+            path=self.postgres_db,
+        )
+
+    @property
+    def migrate_pg_dsn(self) -> PostgresDsn:
+        return PostgresDsn.build(
+            scheme="postgresql+asyncpg",
+            username=self.postgres_migrate_user,
+            password=self.postgres_migrate_password,
             host=self.postgres_host,
             port=self.postgres_port,
             path=self.postgres_db,

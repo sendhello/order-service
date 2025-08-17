@@ -3,7 +3,8 @@ import zoneinfo
 from decimal import Decimal
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, ValidationError, model_validator
+from typing import Self
 from core.settings import settings
 from constants.order import ContentType, DeliveryServiceLevel, OrderStatus, PackageType, PaymentMethod, OrderType
 
@@ -126,6 +127,21 @@ class OrderCreate(BaseOrder):
     sender: PartyCreate | None = Field(None, description="Sender")
     recipient: PartyCreate = Field(..., description="Recipient")
     time_windows: list[TimeWindowCreate] = Field(default_factory=list, description="Delivery time windows")
+
+    @model_validator(mode="after")
+    def validate_sender_and_recipient(self) -> Self:
+        if not self.sender and not self.recipient:
+            raise ValueError("At least one of sender or recipient must be provided")
+
+        if (
+                self.sender.phone == self.recipient.phone
+                and self.sender.address == self.recipient.address
+                and self.sender.first_name == self.recipient.first_name
+                and self.sender.last_name == self.recipient.last_name
+        ):
+            raise ValueError("Sender and recipient cannot be the same person with the same address and phone number")
+
+        return self
 
 
 class OrderUpdate(Model):
