@@ -1,95 +1,368 @@
 # Order Service
 
-Order management service for courier delivery
+[![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/release/python-3130/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115.14-green.svg)](https://fastapi.tiangolo.com/)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-* **Application Language:** Python 3.13
-* **Supported Communication Protocols:** REST API
-* **Infrastructure Dependencies:** Postgres, Redis
-* **System Package Dependencies:** None
-* **PostgreSQL Extension Dependencies:** None
-* **Environment Role:** development
-* **Minimum System Requirements:** 1 CPU, 1Gb RAM
+A microservice for managing courier delivery orders with multi-tenant architecture support.
 
-## Service support
+## Table of Contents
 
-Software engineers:
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Architecture](#architecture)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Usage](#usage)
+- [API Documentation](#api-documentation)
+- [Development](#development)
+- [Testing](#testing)
+- [Environment Variables](#environment-variables)
+- [Deployment](#deployment)
+- [Contributing](#contributing)
+- [License](#license)
+- [Authors](#authors)
 
-* Ivan Bazhenov (*[@sendhello](https://github.com/sendhello)*)
+## Features
 
-## Description of Required Methods to Run the Service
+- 🚚 **Order Management**: Create, read, update, and delete delivery orders
+- 👥 **Multi-tenant Architecture**: Support for multiple organizations
+- 📦 **Package Details**: Detailed package information including dimensions and weight
+- 📍 **Location Tracking**: GPS coordinates for pickup and delivery locations
+- 🕐 **Time Windows**: Flexible delivery time scheduling
+- 💳 **Payment Integration**: Multiple payment methods support
+- 🔐 **JWT Authentication**: Secure API access
+- 📊 **Distributed Tracing**: OpenTelemetry integration with Jaeger
+- 🔍 **Order Tracking**: Real-time order status tracking
+- 📱 **RESTful API**: Clean and well-documented API endpoints
 
-### Service Startup
-```commandline
-on the root
-docker compose up --build
+## Tech Stack
+
+- **Backend Framework**: [FastAPI](https://fastapi.tiangolo.com/) 0.115.14
+- **Language**: Python 3.13
+- **Database**: PostgreSQL with [SQLAlchemy](https://www.sqlalchemy.org/) ORM
+- **Cache**: Redis
+- **Authentication**: JWT with async-fastapi-jwt-auth
+- **Migration**: Alembic
+- **Validation**: Pydantic v2
+- **Tracing**: OpenTelemetry + Jaeger
+- **ASGI Server**: Uvicorn
+- **Containerization**: Docker & Docker Compose
+
+## Architecture
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Client Apps   │    │   Web Client    │    │   Mobile Apps   │
+└─────────┬───────┘    └─────────┬───────┘    └─────────┬───────┘
+          │                      │                      │
+          └──────────────────────┼──────────────────────┘
+                                 │
+                    ┌─────────────┴─────────────┐
+                    │      Order Service        │
+                    │     (FastAPI + JWT)       │
+                    └─────────────┬─────────────┘
+                                  │
+              ┌───────────────────┼───────────────────┐
+              │                   │                   │
+    ┌─────────▼─────────┐ ┌───────▼────────┐ ┌───────▼────────┐
+    │   PostgreSQL      │ │     Redis      │ │     Jaeger     │
+    │   (Primary DB)    │ │    (Cache)     │ │   (Tracing)    │
+    └───────────────────┘ └────────────────┘ └────────────────┘
 ```
 
-Or if you want to run it in development mode:
+## Prerequisites
 
-```commandline
-# Create a .env.local file with the necessary environment variables
-export $(grep -v -E '^\s*(#|$)' .env.local | xargs)
-docker compose -f docker-compose-dev.yml up
-python manage.py migrate
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+- **Python**: 3.13 or higher
+- **Docker**: 20.10 or higher
+- **Docker Compose**: 2.0 or higher
+- **PostgreSQL**: 14 or higher (if running locally)
+- **Redis**: 6.2 or higher (if running locally)
+
+## Installation
+
+### Option 1: Docker (Recommended)
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd order-service
+   ```
+
+2. **Build and start services**
+   ```bash
+   docker compose up --build
+   ```
+
+The service will be available at `http://localhost:8000`
+
+### Option 2: Local Development
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd order-service
+   ```
+
+2. **Create virtual environment**
+   ```bash
+   python3.13 -m venv .venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   ```
+
+3. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   # or if using poetry
+   poetry install
+   ```
+
+4. **Set up environment variables**
+   ```bash
+   cp .env.example .env.local
+   # Edit .env.local with your configuration
+   export $(grep -v -E '^\s*(#|$)' .env.local | xargs)
+   ```
+
+5. **Start infrastructure services**
+   ```bash
+   docker compose -f docker-compose-dev.yml up -d
+   ```
+
+6. **Run database migrations**
+   ```bash
+   python manage.py migrate
+   ```
+
+7. **Start the application**
+   ```bash
+   uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+   ```
+
+## Usage
+
+### Basic API Usage
+
+```bash
+# Create an order
+curl -X POST "http://localhost:8000/api/v1/orders/" \
+  -H "Authorization: Bearer <your-jwt-token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Package Delivery",
+    "recipient": {
+      "first_name": "John",
+      "last_name": "Doe",
+      "phone": "+1234567890",
+      "address": "123 Main St, City, State"
+    },
+    "package_details": [{
+      "type": "package",
+      "weight": 1.5,
+      "description": "Electronics"
+    }]
+  }'
+
+# Get order by ID
+curl -X GET "http://localhost:8000/api/v1/orders/{order_id}" \
+  -H "Authorization: Bearer <your-jwt-token>"
+
+# Track order
+curl -X GET "http://localhost:8000/api/v1/orders/tracking/{tracking_id}" \
+  -H "Authorization: Bearer <your-jwt-token>"
 ```
 
-### Documentation
-* http://127.0.0.1/api/orders/openapi (Swagger)
-* http://127.0.0.1/api/orders/openapi.json (openapi)
+## API Documentation
 
-## API Endpoints
+Once the service is running, you can access:
 
-### Order Management
-* `POST /api/v1/orders/` - Create order
-* `GET /api/v1/orders/` - Get list of orders (with pagination and filtering)
-* `GET /api/v1/orders/{order_id}` - Get order by ID
-* `GET /api/v1/orders/tracking/{tracking_id}` - Get order by tracking ID
-* `PUT /api/v1/orders/{order_id}` - Update order
-* `DELETE /api/v1/orders/{order_id}` - Delete order
+- **Swagger UI**: [http://localhost:8000/api/orders/openapi](http://localhost:8000/api/orders/openapi)
+- **OpenAPI JSON**: [http://localhost:8000/api/orders/openapi.json](http://localhost:8000/api/orders/openapi.json)
 
-### Delivery Management
-* `POST /api/v1/orders/{order_id}/assign` - Assign courier
-* `POST /api/v1/orders/{order_id}/start` - Start delivery
-* `POST /api/v1/orders/{order_id}/complete` - Complete delivery
-* `POST /api/v1/orders/{order_id}/cancel` - Cancel order
+### Main Endpoints
 
-## Description of Additional Service Methods
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/orders/` | Create a new order |
+| `GET` | `/api/v1/orders/` | Get list of orders (paginated) |
+| `GET` | `/api/v1/orders/{order_id}` | Get order by ID |
+| `GET` | `/api/v1/orders/tracking/{tracking_id}` | Get order by tracking ID |
+| `PUT` | `/api/v1/orders/{order_id}` | Update order |
+| `DELETE` | `/api/v1/orders/{order_id}` | Delete order |
+| `POST` | `/api/v1/orders/{order_id}/assign` | Assign courier |
+| `POST` | `/api/v1/orders/{order_id}/start` | Start delivery |
+| `POST` | `/api/v1/orders/{order_id}/complete` | Complete delivery |
+| `POST` | `/api/v1/orders/{order_id}/cancel` | Cancel order |
 
-### Running functional-tests
-Installing dependencies from pyproject.toml at the project root
+## Development
 
-```commandline
-pytest -vv
-```
+### Code Quality Tools
 
-### Running linters
-Installing dependencies from pyproject.toml at the project root
+We use several tools to maintain code quality:
 
-```commandline
-isort .
-flake8 .
+```bash
+# Format code
 black --skip-string-normalization .
+
+# Sort imports
+isort .
+
+# Lint code (modern alternative to flake8)
+ruff check .
+
+# Type checking
+mypy .
+
+# Security scanning
+bandit -r .
 ```
 
-### Description of ENV Variables
+### Pre-commit Hooks
 
-| Variable Name            | Possible Value                                        | Description                                                             |
-|:-------------------------|-------------------------------------------------------|:------------------------------------------------------------------------|
-| DEBUG                    | false                                                 | Debug mode                                                              |
-| PROJECT_NAME             | Order Service                                         | Name of the service (displayed in Swagger)                              |
-| POSTGRES_HOST            | order-postgres                                        | PostgreSQL server hostname                                              |
-| POSTGRES_PORT            | 5432                                                  | PostgreSQL server port                                                  |
-| POSTGRES_DB              | orders                                                | PostgreSQL database name                                                |
-| POSTGRES_USER            | app                                                   | PostgreSQL username                                                     |
-| POSTGRES_PASSWORD        | ***                                                   | PostgreSQL password                                                     |
-| REDIS_HOST               | redis                                                 | Redis server hostname                                                   |
-| REDIS_PORT               | 6379                                                  | Redis server port                                                       |
-| ALLOW_EMPTY_PASSWORD     | yes                                                   | Allow Redis to start without password (for development)                |
-| AUTHJWT_SECRET_KEY       | secret                                                | JWT secret key for authentication                                       |
-| JAEGER_TRACE             | true                                                  | Enable Jaeger tracing                                                   |
-| JAEGER_AGENT_HOST        | jaeger                                                | Jaeger agent host                                                       |
-| JAEGER_AGENT_PORT        | 6831                                                  | Jaeger agent port                                                       |
+Install pre-commit hooks to ensure code quality:
 
-### Authentication
-This service uses JWT authentication. All endpoints require a valid JWT token in the Authorization header.
+```bash
+pre-commit install
+```
+
+### Database Migrations
+
+```bash
+# Create new migration
+alembic revision --autogenerate -m "Description of changes"
+
+# Apply migrations
+alembic upgrade head
+
+# Downgrade migration
+alembic downgrade -1
+```
+
+### Project Structure
+
+```
+order-service/
+├── api/                    # API endpoints
+│   └── v1/                # API version 1
+├── constants/             # Application constants
+├── core/                  # Core application logic
+├── db/                    # Database configuration
+├── middleware/            # Custom middleware
+├── migrations/            # Database migrations
+├── models/                # SQLAlchemy models
+├── schemas/               # Pydantic schemas
+├── security/              # Authentication logic
+├── services/              # Business logic
+├── main.py                # Application entry point
+├── manage.py              # Management commands
+└── pyproject.toml         # Project configuration
+```
+
+## Testing
+
+### Running Tests
+
+```bash
+# Run all tests
+pytest -vv
+
+# Run tests with coverage
+pytest --cov=. --cov-report=html
+
+# Run specific test file
+pytest tests/test_orders.py -v
+
+# Run tests in parallel
+pytest -n auto
+```
+
+### Test Structure
+
+```
+tests/
+├── conftest.py           # Test configuration
+├── test_orders.py        # Order endpoint tests
+├── test_models.py        # Model tests
+└── test_services.py      # Service layer tests
+```
+
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DEBUG` | `false` | Enable debug mode |
+| `PROJECT_NAME` | `Order Service` | Service name (displayed in docs) |
+| `POSTGRES_HOST` | `localhost` | PostgreSQL hostname |
+| `POSTGRES_PORT` | `5432` | PostgreSQL port |
+| `POSTGRES_DB` | `orders` | Database name |
+| `POSTGRES_USER` | `app` | Database username |
+| `POSTGRES_PASSWORD` | - | Database password |
+| `REDIS_HOST` | `localhost` | Redis hostname |
+| `REDIS_PORT` | `6379` | Redis port |
+| `AUTHJWT_SECRET_KEY` | - | JWT secret key |
+| `JAEGER_TRACE` | `false` | Enable Jaeger tracing |
+| `JAEGER_AGENT_HOST` | `localhost` | Jaeger agent hostname |
+| `JAEGER_AGENT_PORT` | `6831` | Jaeger agent port |
+
+## Deployment
+
+### Docker Production Build
+
+```bash
+# Build production image
+docker build -t order-service:latest .
+
+# Run with production settings
+docker run -d \
+  --name order-service \
+  -p 8000:8000 \
+  --env-file .env.prod \
+  order-service:latest
+```
+
+### System Requirements
+
+- **Minimum**: 1 CPU, 1GB RAM
+- **Recommended**: 2 CPU, 2GB RAM
+- **Storage**: 10GB for logs and temporary files
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Add tests for new functionality
+5. Ensure all tests pass (`pytest`)
+6. Run code quality checks (`ruff check .`, `mypy .`)
+7. Commit your changes (`git commit -m 'Add amazing feature'`)
+8. Push to the branch (`git push origin feature/amazing-feature`)
+9. Open a Pull Request
+
+### Code Style Guidelines
+
+- Follow PEP 8 style guide
+- Use type hints for all functions
+- Write docstrings for all public methods
+- Maintain test coverage above 80%
+- Use meaningful commit messages
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Authors
+
+- **Ivan Bazhenov** - *Initial work* - [@sendhello](https://github.com/sendhello)
+  - Email: bazhenov.in@gmail.com
+
+## Support
+
+For support and questions:
+
+- Create an issue on GitHub
+- Contact the maintainer via email
+- Check the documentation at `/docs` endpoint
+
+---
+
+Built with ❤️ using FastAPI and Python 3.13
