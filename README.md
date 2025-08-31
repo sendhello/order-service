@@ -2,7 +2,8 @@
 
 [![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/release/python-3130/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115.14-green.svg)](https://fastapi.tiangolo.com/)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE.md)
+[![CodeQL](https://github.com/sendhello/order-service/actions/workflows/codeql.yml/badge.svg)](https://github.com/sendhello/order-service/actions/workflows/codeql.yml)
 
 A microservice for managing courier delivery orders with multi-tenant architecture support.
 
@@ -19,6 +20,7 @@ A microservice for managing courier delivery orders with multi-tenant architectu
 - [Testing](#testing)
 - [Environment Variables](#environment-variables)
 - [Deployment](#deployment)
+- [Security](#security)
 - [Contributing](#contributing)
 - [License](#license)
 - [Authors](#authors)
@@ -52,23 +54,28 @@ A microservice for managing courier delivery orders with multi-tenant architectu
 ## Architecture
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Client Apps   │    │   Web Client    │    │   Mobile Apps   │
-└─────────┬───────┘    └─────────┬───────┘    └─────────┬───────┘
-          │                      │                      │
-          └──────────────────────┼──────────────────────┘
-                                 │
+  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+  │   Client Apps   │    │   Web Client    │    │   Mobile Apps   │
+  └─────────┬───────┘    └────────┬────────┘    └─────────┬───────┘
+            │                     │                       │
+            └─────────────────────┼───────────────────────┘
+                                  │
                     ┌─────────────┴─────────────┐
-                    │      Order Service        │
-                    │     (FastAPI + JWT)       │
+                    │      Auth Service         │
+                    │   (FastAPI + JWT + OAuth) │
                     └─────────────┬─────────────┘
+                                  │
+                    ┌─────────────┴─────────────┐
+                    │    Order Service          │
+                    │  (Consumes JWT tokens)    │
+                    └───────────────────────────┘
                                   │
               ┌───────────────────┼───────────────────┐
               │                   │                   │
-    ┌─────────▼─────────┐ ┌───────▼────────┐ ┌───────▼────────┐
-    │   PostgreSQL      │ │     Redis      │ │     Jaeger     │
-    │   (Primary DB)    │ │    (Cache)     │ │   (Tracing)    │
-    └───────────────────┘ └────────────────┘ └────────────────┘
+    ┌─────────▼─────────┐ ┌───────▼────────┐ ┌────────▼─────────┐
+    │   PostgreSQL      │ │     Redis      │ │   Other Services │
+    │   (Order Data)    │ │    (Cache)     │ │ (Future Services)│
+    └───────────────────┘ └────────────────┘ └──────────────────┘
 ```
 
 ## Prerequisites
@@ -326,6 +333,38 @@ docker run -d \
 - **Recommended**: 2 CPU, 2GB RAM
 - **Storage**: 10GB for logs and temporary files
 
+## Security
+
+Security is a top priority for this project. We have implemented multiple security measures and follow best practices to ensure the safety of your data.
+
+### Security Features
+
+- **Multi-tenant Architecture**: Row Level Security (RLS) ensures data isolation between organizations
+- **JWT Authentication**: Secure token-based authentication system
+- **Input Validation**: All API inputs are validated using Pydantic schemas
+- **SQL Injection Protection**: SQLAlchemy ORM with parameterized queries
+- **Distributed Tracing**: OpenTelemetry integration for audit trails
+- **Secure Error Handling**: Error responses don't leak sensitive information
+
+### Reporting Security Vulnerabilities
+
+If you discover a security vulnerability, please follow our responsible disclosure process outlined in our [Security Policy](SECURITY.md).
+
+**Please do not create public GitHub issues for security vulnerabilities.** Instead, email us directly at bazhenov.in@gmail.com with details about the vulnerability.
+
+### Security Best Practices
+
+When deploying and using this service:
+
+- Use strong, unique JWT secret keys
+- Enable HTTPS in production
+- Keep dependencies up to date
+- Use secure database connections (SSL/TLS)
+- Implement proper network security measures
+- Regular security audits and monitoring
+
+For detailed security information, please see our [Security Policy](SECURITY.md).
+
 ## Contributing
 
 1. Fork the repository
@@ -348,7 +387,7 @@ docker run -d \
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
 ## Authors
 
