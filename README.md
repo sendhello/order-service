@@ -4,7 +4,7 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115.14-green.svg)](https://fastapi.tiangolo.com/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-A microservice for managing courier delivery orders with multi-tenant architecture support.
+A microservice for managing orders with multi-tenant architecture support.
 
 ## Table of Contents
 
