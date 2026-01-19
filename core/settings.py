@@ -60,6 +60,7 @@ class Settings(PostgresSettings):
 
     # Telemetry settings
     jaeger_trace: bool = True
+    jaeger_trace_debug: bool = False
     jaeger_agent_host: str = "localhost"
     jaeger_agent_port: int = 6831
 

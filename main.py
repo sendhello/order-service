@@ -26,8 +26,9 @@ app = FastAPI(
     title=settings.project_name,
     description="Order management service for courier delivery",
     version="1.0.0",
-    docs_url="/api/order/openapi",
-    openapi_url="/api/order/openapi.json",
+    docs_url="/api/openapi",
+    openapi_url="/api/openapi.json",
+    redoc_url="/api/redoc",
     default_response_class=ORJSONResponse,
 )
 

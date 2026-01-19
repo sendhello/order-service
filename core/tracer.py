@@ -18,7 +18,7 @@ def configure_tracer() -> None:
     jaeger_span_processor = BatchSpanProcessor(jaeger_exporter)
     trace.get_tracer_provider().add_span_processor(jaeger_span_processor)
 
-    if settings.debug:
+    if settings.jaeger_trace_debug:
         # To see traces in console
         console_exporter = ConsoleSpanExporter()
         console_span_processor = BatchSpanProcessor(console_exporter)
